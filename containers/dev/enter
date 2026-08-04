@@ -6,13 +6,13 @@ if ! command -v podman >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! podman container exists dotfiles-dev; then
+if ! podman container exists box-dev; then
     printf '%s\n' 'dev container does not exist. Create it with ./containers/dev/create' >&2
     exit 1
 fi
 
-if [[ "$(podman container inspect --format '{{.State.Running}}' dotfiles-dev)" == true ]]; then
-    exec podman exec --interactive --tty dotfiles-dev fish --login
+if [[ "$(podman container inspect --format '{{.State.Running}}' box-dev)" == true ]]; then
+    exec podman exec --interactive --tty box-dev fish --login
 fi
 
-exec podman start --attach --interactive dotfiles-dev
+exec podman start --attach --interactive box-dev

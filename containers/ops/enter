@@ -6,9 +6,9 @@ if ! command -v podman >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! podman container exists dotfiles-ops; then
+if ! podman container exists box-ops; then
     printf '%s\n' 'ops container does not exist. Create it with ./containers/ops/create' >&2
     exit 1
 fi
 
-exec podman start --attach --interactive dotfiles-ops
+exec podman start --attach --interactive box-ops

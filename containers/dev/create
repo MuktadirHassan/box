@@ -13,8 +13,7 @@ usage() {
 Usage: ./containers/dev/create [--recreate] [--dry-run]
 
 Build and create the rootless dev container. It receives a dedicated container
-home, the dotfiles checkout (read-only), DeveloperCache, /ssd2/projects,
-~/.claude, and the active host Wayland socket.
+home, DeveloperCache, /ssd2/projects, and the active host Wayland socket.
 
 Options:
   --recreate  Remove an existing container before creating it; keeps its home
@@ -37,7 +36,6 @@ name=dev
 home="$CONTAINER_HOME_BASE/$name"
 cache="$HOME/DeveloperCache"
 projects="/ssd2/projects"
-claude_home="$HOME/.claude"
 
 if [[ -z "${XDG_RUNTIME_DIR:-}" || -z "${WAYLAND_DISPLAY:-}" ]]; then
     printf '%s\n' 'An active Wayland session is required to create the dev container.' >&2
@@ -62,15 +60,9 @@ if [[ "$recreate" == true ]]; then
 fi
 prepare_home "$home"
 run mkdir -p -- "$cache"
-bootstrap_container "$name" "$home" \
-    "${wayland_args[@]}" \
-    --mount "type=bind,src=$cache,dst=/home/$CONTAINER_USER/DeveloperCache,rw" \
-    --mount "type=bind,src=$projects,dst=/home/$CONTAINER_USER/projects,rw" \
-    --mount "type=bind,src=$claude_home,dst=/home/$CONTAINER_USER/.claude,rw"
 create_container "$name" "$home" \
     "${wayland_args[@]}" \
     --mount "type=bind,src=$cache,dst=/home/$CONTAINER_USER/DeveloperCache,rw" \
-    --mount "type=bind,src=$projects,dst=/home/$CONTAINER_USER/projects,rw" \
-    --mount "type=bind,src=$claude_home,dst=/home/$CONTAINER_USER/.claude,rw"
+    --mount "type=bind,src=$projects,dst=/home/$CONTAINER_USER/projects,rw"
 
 printf 'dev is ready: ./containers/dev/enter\n'
