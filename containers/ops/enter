@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if ! command -v podman >/dev/null 2>&1; then
+    printf '%s\n' 'Required command is not installed: podman' >&2
+    exit 1
+fi
+
+if ! podman container exists dotfiles-ops; then
+    printf '%s\n' 'ops container does not exist. Create it with ./containers/ops/create' >&2
+    exit 1
+fi
+
+exec podman start --attach --interactive dotfiles-ops
