@@ -1,11 +1,11 @@
 [Desktop Entry]
 Name=Dev Container
 GenericName=Development container
-Comment=Start the dotfiles development container
+Comment=Start the Box development container
 Categories=Development;
-Exec=/home/tamim/dotfiles/containers/dev/enter
+Exec=/ssd2/box/containers/dev/enter
 Icon=/usr/share/pixmaps/archlinux-logo.svg
 Keywords=podman;container;development;
 Terminal=true
-TryExec=/home/tamim/dotfiles/containers/dev/enter
+TryExec=/ssd2/box/containers/dev/enter
 Type=Application

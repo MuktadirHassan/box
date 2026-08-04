@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly ROOT
-readonly CONTAINER_HOME_BASE="${CONTAINER_HOME_BASE:-$HOME/.local/share/podman-homes}"
-readonly CONTAINER_PREFIX="${CONTAINER_PREFIX:-dotfiles}"
+readonly CONTAINER_HOME_BASE="${CONTAINER_HOME_BASE:-$HOME/.local/share/box-homes}"
+readonly CONTAINER_PREFIX="${CONTAINER_PREFIX:-box}"
 readonly CONTAINER_USER="developer"
 
 require_command() {
@@ -31,7 +31,7 @@ container_name() {
 }
 
 image_name() {
-    printf 'local/dotfiles-%s:latest' "$1"
+    printf 'local/box-%s:latest' "$1"
 }
 
 container_exists() {
@@ -69,7 +69,6 @@ container_options() {
         --memory "${PODMAN_MEMORY_LIMIT:-8g}" \
         --cpus "${PODMAN_CPU_LIMIT:-4}" \
         --mount "type=bind,src=$home,dst=/home/$CONTAINER_USER,rw" \
-        --mount "type=bind,src=$ROOT,dst=/home/$CONTAINER_USER/dotfiles,ro" \
         --tmpfs "/tmp:rw,nosuid,nodev,size=${PODMAN_TMP_SIZE:-2g}" \
         --tmpfs /run:rw,nosuid,nodev,size=16m
 }
@@ -105,14 +104,4 @@ create_container() {
 
     read_container_options "$name" "$home"
     run podman create --tty "${container_args[@]}" "$@" "$(image_name "$name")" fish --login
-}
-
-bootstrap_container() {
-    local name="$1"
-    local home="$2"
-    shift 2
-
-    read_container_options "$name" "$home"
-    run podman run --rm "${container_args[@]}" "$@" "$(image_name "$name")" \
-        bash "/home/$CONTAINER_USER/dotfiles/containers/$name/bootstrap.sh"
 }

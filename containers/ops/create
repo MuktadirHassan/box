@@ -12,8 +12,7 @@ usage() {
     cat <<'EOF'
 Usage: ./containers/ops/create [--recreate] [--dry-run]
 
-Build and create the rootless ops container. It receives only a dedicated
-container home and the dotfiles checkout mounted read-only.
+Build and create the rootless ops container with a dedicated container home.
 
 Options:
   --recreate  Remove an existing container before creating it; keeps its home
@@ -40,7 +39,6 @@ if [[ "$recreate" == true ]]; then
     remove_container "$name"
 fi
 prepare_home "$home"
-bootstrap_container "$name" "$home"
 create_container "$name" "$home"
 
 printf 'ops is ready: ./containers/ops/enter\n'
