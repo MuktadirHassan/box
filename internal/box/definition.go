@@ -14,7 +14,10 @@ const (
 	ReadyState   State = "ready"
 )
 
-var namePattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+var (
+	namePattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+	userPattern = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+)
 
 type Definition struct {
 	Version       int           `toml:"version"`
@@ -26,6 +29,7 @@ type Definition struct {
 
 type Configuration struct {
 	Image        string       `toml:"image"`
+	User         string       `toml:"user"`
 	Mounts       []Mount      `toml:"mounts"`
 	Home         Persistence  `toml:"home"`
 	Caches       Persistence  `toml:"caches"`
@@ -75,6 +79,14 @@ func DefaultConfiguration() Configuration {
 func ValidateName(name string) error {
 	if !namePattern.MatchString(name) {
 		return fmt.Errorf("%w %q: use lowercase letters, numbers, and single hyphens only", ErrInvalidName, name)
+	}
+
+	return nil
+}
+
+func ValidateUser(user string) error {
+	if !userPattern.MatchString(user) {
+		return fmt.Errorf("invalid user %q: use a lowercase Linux username", user)
 	}
 
 	return nil

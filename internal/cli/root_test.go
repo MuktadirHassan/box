@@ -66,7 +66,7 @@ func TestSetupRequiresConfirmationBeforeSaving(t *testing.T) {
 	output := &bytes.Buffer{}
 	command.SetOut(output)
 	command.SetErr(output)
-	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest"})
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--user", "dev"})
 
 	if err := command.Execute(); err != ErrSetupConfirmation {
 		t.Fatalf("setup error = %v, want confirmation error", err)
@@ -84,6 +84,24 @@ func TestSetupRequiresConfirmationBeforeSaving(t *testing.T) {
 	}
 }
 
+func TestSetupGeneratesUserWithoutHostIdentity(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	command := newRootCommand(definitions)
+	output := &bytes.Buffer{}
+	command.SetOut(output)
+	command.SetArgs([]string{"setup", "demo"})
+	if err := command.Execute(); err != ErrSetupConfirmation {
+		t.Fatalf("setup error = %v, want confirmation error", err)
+	}
+	if !strings.Contains(output.String(), "user: ") {
+		t.Errorf("setup output = %q, want generated user", output.String())
+	}
+}
+
 func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
 	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
@@ -91,7 +109,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	}
 
 	command := newRootCommand(definitions)
-	command.SetArgs([]string{"setup", "demo", "--backend", "lima", "--image", "archlinux:latest", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--clipboard", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--backend", "lima", "--image", "archlinux:latest", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -105,6 +123,9 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	}
 	if definition.Backend != box.LimaBackend {
 		t.Errorf("Backend = %q, want %q", definition.Backend, box.LimaBackend)
+	}
+	if definition.Configuration.User != "tamim" {
+		t.Errorf("User = %q, want tamim", definition.Configuration.User)
 	}
 	if definition.Configuration.Image != "archlinux:latest" {
 		t.Errorf("Image = %q, want archlinux:latest", definition.Configuration.Image)

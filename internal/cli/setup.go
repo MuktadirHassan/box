@@ -11,6 +11,7 @@ import (
 type setupOptions struct {
 	backend   string
 	image     string
+	user      string
 	mounts    []string
 	cpus      string
 	memory    string
@@ -67,6 +68,7 @@ func newSetupCommand(definitions definitionStore) *cobra.Command {
 	flags := command.Flags()
 	flags.StringVar(&options.backend, "backend", "", "runtime backend: podman or lima")
 	flags.StringVar(&options.image, "image", "", "base image")
+	flags.StringVar(&options.user, "user", "", "Linux user inside the box")
 	flags.StringArrayVar(&options.mounts, "mount", nil, "writable host mount in source:destination form")
 	flags.StringVar(&options.cpus, "cpus", "", "CPU limit")
 	flags.StringVar(&options.memory, "memory", "", "memory limit")
@@ -84,8 +86,18 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	if configuration.Image == "" {
 		configuration = box.DefaultConfiguration()
 	}
-
 	flags := command.Flags()
+	if flags.Changed("user") {
+		configuration.User = options.user
+	}
+	if configuration.User == "" {
+		user, err := generateName()
+		if err != nil {
+			return box.Configuration{}, fmt.Errorf("generate Linux user: %w", err)
+		}
+		configuration.User = user
+	}
+
 	if flags.Changed("image") {
 		configuration.Image = options.image
 	}
@@ -117,6 +129,9 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 
 	if configuration.Image == "" {
 		return box.Configuration{}, fmt.Errorf("base image cannot be empty")
+	}
+	if err := box.ValidateUser(configuration.User); err != nil {
+		return box.Configuration{}, err
 	}
 	if configuration.Limits.PIDsLimit < 0 {
 		return box.Configuration{}, fmt.Errorf("process limit cannot be negative")

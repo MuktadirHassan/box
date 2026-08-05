@@ -1,0 +1,138 @@
+package podman
+
+import (
+	"context"
+	"errors"
+	"net"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/MuktadirHassan/box/internal/box"
+)
+
+type commandCall struct{ arguments []string }
+type outputResult struct {
+	output string
+	err    error
+}
+type fakeRunner struct {
+	outputs               []outputResult
+	outputCalls, runCalls []commandCall
+	runErr                error
+}
+
+func (r *fakeRunner) Output(_ context.Context, arguments ...string) (string, error) {
+	r.outputCalls = append(r.outputCalls, commandCall{arguments})
+	result := r.outputs[0]
+	r.outputs = r.outputs[1:]
+	return result.output, result.err
+}
+func (r *fakeRunner) Run(_ context.Context, arguments ...string) error {
+	r.runCalls = append(r.runCalls, commandCall{arguments})
+	return r.runErr
+}
+
+func TestValidateRequiresRootlessPodman(t *testing.T) {
+	runner := &fakeRunner{outputs: []outputResult{{output: "true\n"}}}
+	if err := New(Options{Runner: runner}).Validate(context.Background()); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+}
+
+func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
+	runner := &fakeRunner{outputs: []outputResult{{output: "container-id\n"}}}
+	mount := t.TempDir()
+	backend := New(Options{Runner: runner})
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Home: box.Persistence{Enabled: true}, Caches: box.Persistence{Enabled: true}, Network: "none", Mounts: []box.Mount{{Source: mount, Destination: "/workspace"}}}
+	metadata, err := backend.Create(context.Background(), definition)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if metadata.ID != "container-id" {
+		t.Errorf("ID = %q", metadata.ID)
+	}
+	arguments := runner.outputCalls[0].arguments
+	joined := strings.Join(arguments, "\x00")
+	for _, want := range []string{"--user\x00dev", "dev:x:1000:1000::/home/dev:/bin/sh", "HOME=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("arguments missing %q: %#v", want, arguments)
+		}
+	}
+	if strings.Contains(joined, "keep-id") {
+		t.Errorf("arguments unexpectedly couple identity to host: %#v", arguments)
+	}
+}
+
+func TestCreateRejectsUnsafeConfiguration(t *testing.T) {
+	backend := New(Options{Runner: &fakeRunner{}})
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{Image: " image", User: "dev", Network: "outbound"}
+	if _, err := backend.Create(context.Background(), definition); err == nil {
+		t.Error("Create() error = nil for invalid image")
+	}
+	definition.Configuration.Image = "ubuntu:24.04"
+	definition.Configuration.Network = "accidentally-open"
+	if _, err := backend.Create(context.Background(), definition); err == nil {
+		t.Error("Create() error = nil for invalid network")
+	}
+	definition.Configuration.Network = "none"
+	definition.Configuration.Mounts = []box.Mount{{Source: "relative", Destination: "/workspace"}}
+	if _, err := backend.Create(context.Background(), definition); err == nil {
+		t.Error("Create() error = nil for invalid mount")
+	}
+}
+
+func TestCreateRejectsInvalidRuntimeID(t *testing.T) {
+	runner := &fakeRunner{outputs: []outputResult{{output: "\n"}}}
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "none"}
+	if _, err := New(Options{Runner: runner}).Create(context.Background(), definition); err == nil {
+		t.Error("Create() error = nil for empty runtime ID")
+	}
+}
+
+func TestIntegrationsRequireRealSockets(t *testing.T) {
+	directory := t.TempDir()
+	socket := filepath.Join(directory, "agent.sock")
+	listener, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+	backend := New(Options{Env: func(name string) string {
+		return map[string]string{"XDG_RUNTIME_DIR": directory, "WAYLAND_DISPLAY": "agent.sock", "SSH_AUTH_SOCK": socket}[name]
+	}})
+	if _, err := backend.withClipboard(nil); err != nil {
+		t.Fatalf("withClipboard() error = %v", err)
+	}
+	if _, err := backend.withSSHAgent(nil); err != nil {
+		t.Fatalf("withSSHAgent() error = %v", err)
+	}
+	invalid := New(Options{Env: func(string) string { return "/tmp/not-a-socket" }})
+	if _, err := invalid.withSSHAgent(nil); err == nil {
+		t.Error("withSSHAgent() error = nil for regular path")
+	}
+}
+
+func TestEnterOnlyStartsKnownStoppedStates(t *testing.T) {
+	runner := &fakeRunner{outputs: []outputResult{{output: "exited\n"}}}
+	metadata := box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id"}
+	if err := New(Options{Runner: runner}).Enter(context.Background(), metadata); err != nil {
+		t.Fatal(err)
+	}
+	want := []commandCall{{arguments: []string{"start", "--attach", "--interactive", "container-id"}}}
+	if !reflect.DeepEqual(runner.runCalls, want) {
+		t.Errorf("Run calls = %#v, want %#v", runner.runCalls, want)
+	}
+}
+
+func TestExecReturnsRunnerFailure(t *testing.T) {
+	runner := &fakeRunner{runErr: errors.New("podman failed")}
+	err := New(Options{Runner: runner}).Exec(context.Background(), box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id"}, []string{"git", "status"})
+	if !errors.Is(err, runner.runErr) {
+		t.Errorf("Exec() error = %v", err)
+	}
+}
