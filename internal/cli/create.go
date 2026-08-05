@@ -36,7 +36,7 @@ func createDefinition(definitions definitionStore, arguments []string) (string, 
 
 	var err error
 	for range generatedNameAttempts {
-		name, err := box.GenerateName()
+		name, err := generateName()
 		if err != nil {
 			return "", err
 		}
