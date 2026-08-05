@@ -31,7 +31,7 @@ func TestCreateWritesReadableTOML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
-	want := "version = 1\nname = 'demo'\nstate = 'created'\n"
+	want := "version = 1\nname = 'demo'\nstate = 'created'\nbackend = 'podman'\n"
 	if string(data) != want {
 		t.Errorf("box.toml = %q, want %q", data, want)
 	}

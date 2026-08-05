@@ -8,7 +8,7 @@ import (
 )
 
 func writeDefinition(writer io.Writer, definition box.Definition) error {
-	if _, err := fmt.Fprintf(writer, "name: %s\nstate: %s\nversion: %d\n", definition.Name, definition.State, definition.Version); err != nil {
+	if _, err := fmt.Fprintf(writer, "name: %s\nstate: %s\nbackend: %s\nversion: %d\n", definition.Name, definition.State, definition.Backend, definition.Version); err != nil {
 		return err
 	}
 	if definition.State != box.ReadyState {

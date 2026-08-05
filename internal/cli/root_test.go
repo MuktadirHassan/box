@@ -39,7 +39,7 @@ func TestBoxLifecycleCommandsUseInjectedStore(t *testing.T) {
 	if err := command.Execute(); err != nil {
 		t.Fatalf("inspect command error = %v", err)
 	}
-	if output.String() != "name: demo\nstate: created\nversion: 1\n" {
+	if output.String() != "name: demo\nstate: created\nbackend: podman\nversion: 1\n" {
 		t.Errorf("inspect output = %q", output.String())
 	}
 
@@ -91,7 +91,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	}
 
 	command := newRootCommand(definitions)
-	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--wayland", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--backend", "lima", "--image", "archlinux:latest", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--wayland", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -102,6 +102,9 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	}
 	if definition.State != box.ReadyState {
 		t.Errorf("State = %q, want %q", definition.State, box.ReadyState)
+	}
+	if definition.Backend != box.LimaBackend {
+		t.Errorf("Backend = %q, want %q", definition.Backend, box.LimaBackend)
 	}
 	if definition.Configuration.Image != "archlinux:latest" {
 		t.Errorf("Image = %q, want archlinux:latest", definition.Configuration.Image)

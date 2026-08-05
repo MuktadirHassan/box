@@ -9,6 +9,7 @@ import (
 )
 
 type setupOptions struct {
+	backend  string
 	image    string
 	mounts   []string
 	cpus     string
@@ -36,6 +37,15 @@ func newSetupCommand(definitions definitionStore) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if definition.Backend == "" {
+				definition.Backend = box.PodmanBackend
+			}
+			if command.Flags().Changed("backend") {
+				definition.Backend = box.Backend(options.backend)
+			}
+			if err := box.ValidateBackend(definition.Backend); err != nil {
+				return err
+			}
 			definition.Configuration = configuration
 			definition.State = box.ReadyState
 
@@ -55,6 +65,7 @@ func newSetupCommand(definitions definitionStore) *cobra.Command {
 	}
 
 	flags := command.Flags()
+	flags.StringVar(&options.backend, "backend", "", "runtime backend: podman or lima")
 	flags.StringVar(&options.image, "image", "", "base image")
 	flags.StringArrayVar(&options.mounts, "mount", nil, "writable host mount in source:destination form")
 	flags.StringVar(&options.cpus, "cpus", "", "CPU limit")

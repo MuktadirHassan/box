@@ -20,6 +20,7 @@ type Definition struct {
 	Version       int           `toml:"version"`
 	Name          string        `toml:"name"`
 	State         State         `toml:"state"`
+	Backend       Backend       `toml:"backend"`
 	Configuration Configuration `toml:"configuration,omitempty"`
 }
 
@@ -58,6 +59,7 @@ func NewDefinition(name string) Definition {
 		Version: CurrentDefinitionVersion,
 		Name:    name,
 		State:   CreatedState,
+		Backend: PodmanBackend,
 	}
 }
 
