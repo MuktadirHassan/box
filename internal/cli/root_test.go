@@ -91,7 +91,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	}
 
 	command := newRootCommand(definitions)
-	command.SetArgs([]string{"setup", "demo", "--backend", "lima", "--image", "archlinux:latest", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--wayland", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--backend", "lima", "--image", "archlinux:latest", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -112,8 +112,8 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if definition.Configuration.Limits.Memory != "4g" || definition.Configuration.Limits.PIDsLimit != 512 {
 		t.Errorf("Limits = %#v, want memory 4g and pids 512", definition.Configuration.Limits)
 	}
-	if !definition.Configuration.Integrations.Wayland {
-		t.Error("Wayland = false, want true")
+	if !definition.Configuration.Integrations.Clipboard {
+		t.Error("Clipboard = false, want true")
 	}
 	if mounts := definition.Configuration.Mounts; len(mounts) != 1 || mounts[0] != (box.Mount{Source: "/work", Destination: "/workspace"}) {
 		t.Errorf("Mounts = %#v, want /work:/workspace", mounts)

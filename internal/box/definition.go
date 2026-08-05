@@ -50,8 +50,8 @@ type Limits struct {
 }
 
 type Integrations struct {
-	Wayland  bool `toml:"wayland"`
-	SSHAgent bool `toml:"ssh_agent"`
+	Clipboard bool `toml:"clipboard"`
+	SSHAgent  bool `toml:"ssh_agent"`
 }
 
 func NewDefinition(name string) Definition {

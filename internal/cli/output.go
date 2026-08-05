@@ -34,7 +34,7 @@ func writeDefinition(writer io.Writer, definition box.Definition) error {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintf(writer, "wayland: %t\nssh agent: %t\n", configuration.Integrations.Wayland, configuration.Integrations.SSHAgent); err != nil {
+	if _, err := fmt.Fprintf(writer, "clipboard: %t\nssh agent: %t\n", configuration.Integrations.Clipboard, configuration.Integrations.SSHAgent); err != nil {
 		return err
 	}
 	for _, mount := range configuration.Mounts {
