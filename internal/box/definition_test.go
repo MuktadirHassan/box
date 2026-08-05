@@ -14,4 +14,7 @@ func TestNewDefinitionUsesInitialValues(t *testing.T) {
 	if definition.State != CreatedState {
 		t.Errorf("State = %q, want %q", definition.State, CreatedState)
 	}
+	if definition.Backend != PodmanBackend {
+		t.Errorf("Backend = %q, want %q", definition.Backend, PodmanBackend)
+	}
 }
