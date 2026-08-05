@@ -32,6 +32,10 @@ type RuntimeStatus struct {
 	StorageBytes int64        `json:"storage_bytes"`
 }
 
+type Metadata struct {
+	Runtime RuntimeMetadata `json:"runtime"`
+}
+
 var backendPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
 func ValidateBackend(backend Backend) error {
