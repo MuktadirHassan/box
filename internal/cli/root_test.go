@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
 )
 
@@ -29,7 +30,7 @@ func TestBoxLifecycleCommandsUseInjectedStore(t *testing.T) {
 	if err := command.Execute(); err != nil {
 		t.Fatalf("list command error = %v", err)
 	}
-	if output.String() != "demo\tcreated\n" {
+	if output.String() != "demo\tcreated\t-\n" {
 		t.Errorf("list output = %q", output.String())
 	}
 
@@ -52,6 +53,67 @@ func TestBoxLifecycleCommandsUseInjectedStore(t *testing.T) {
 	}
 	if _, err := definitions.Load("demo"); err == nil {
 		t.Error("Load() error = nil after purge")
+	}
+}
+
+func TestSetupRequiresConfirmationBeforeSaving(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	command := newRootCommand(definitions)
+	output := &bytes.Buffer{}
+	command.SetOut(output)
+	command.SetErr(output)
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest"})
+
+	if err := command.Execute(); err != ErrSetupConfirmation {
+		t.Fatalf("setup error = %v, want confirmation error", err)
+	}
+	if !strings.Contains(output.String(), "image: archlinux:latest") {
+		t.Errorf("setup output = %q, want resolved image", output.String())
+	}
+
+	definition, err := definitions.Load("demo")
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if definition.State != box.CreatedState {
+		t.Errorf("State = %q, want %q before confirmation", definition.State, box.CreatedState)
+	}
+}
+
+func TestSetupSavesResolvedConfiguration(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	command := newRootCommand(definitions)
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--wayland", "--yes"})
+	if err := command.Execute(); err != nil {
+		t.Fatalf("setup command error = %v", err)
+	}
+
+	definition, err := definitions.Load("demo")
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if definition.State != box.ReadyState {
+		t.Errorf("State = %q, want %q", definition.State, box.ReadyState)
+	}
+	if definition.Configuration.Image != "archlinux:latest" {
+		t.Errorf("Image = %q, want archlinux:latest", definition.Configuration.Image)
+	}
+	if definition.Configuration.Limits.Memory != "4g" || definition.Configuration.Limits.PIDsLimit != 512 {
+		t.Errorf("Limits = %#v, want memory 4g and pids 512", definition.Configuration.Limits)
+	}
+	if !definition.Configuration.Integrations.Wayland {
+		t.Error("Wayland = false, want true")
+	}
+	if mounts := definition.Configuration.Mounts; len(mounts) != 1 || mounts[0] != (box.Mount{Source: "/work", Destination: "/workspace"}) {
+		t.Errorf("Mounts = %#v, want /work:/workspace", mounts)
 	}
 }
 
