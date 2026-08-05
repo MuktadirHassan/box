@@ -9,16 +9,16 @@ import (
 )
 
 type setupOptions struct {
-	backend  string
-	image    string
-	mounts   []string
-	cpus     string
-	memory   string
-	pids     int
-	network  string
-	wayland  bool
-	sshAgent bool
-	yes      bool
+	backend   string
+	image     string
+	mounts    []string
+	cpus      string
+	memory    string
+	pids      int
+	network   string
+	clipboard bool
+	sshAgent  bool
+	yes       bool
 }
 
 func newSetupCommand(definitions definitionStore) *cobra.Command {
@@ -72,7 +72,7 @@ func newSetupCommand(definitions definitionStore) *cobra.Command {
 	flags.StringVar(&options.memory, "memory", "", "memory limit")
 	flags.IntVar(&options.pids, "pids-limit", 0, "process limit")
 	flags.StringVar(&options.network, "network", "", "network policy: outbound or none")
-	flags.BoolVar(&options.wayland, "wayland", false, "enable Wayland integration")
+	flags.BoolVar(&options.clipboard, "clipboard", false, "enable host clipboard integration")
 	flags.BoolVar(&options.sshAgent, "ssh-agent", false, "enable SSH agent forwarding")
 	flags.BoolVar(&options.yes, "yes", false, "save the displayed configuration")
 
@@ -108,8 +108,8 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	if flags.Changed("network") {
 		configuration.Network = options.network
 	}
-	if flags.Changed("wayland") {
-		configuration.Integrations.Wayland = options.wayland
+	if flags.Changed("clipboard") {
+		configuration.Integrations.Clipboard = options.clipboard
 	}
 	if flags.Changed("ssh-agent") {
 		configuration.Integrations.SSHAgent = options.sshAgent
