@@ -36,7 +36,6 @@ func (s Store) Create(definition box.Definition) error {
 		return err
 	}
 
-	path := s.definitionPath(definition.Name)
 	if err := os.MkdirAll(s.root, 0o755); err != nil {
 		return fmt.Errorf("create boxes directory: %w", err)
 	}
@@ -47,6 +46,24 @@ func (s Store) Create(definition box.Definition) error {
 		return fmt.Errorf("create box directory: %w", err)
 	}
 
+	return s.save(definition)
+}
+
+func (s Store) Update(definition box.Definition) error {
+	if err := box.ValidateName(definition.Name); err != nil {
+		return err
+	}
+
+	path := s.definitionPath(definition.Name)
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("load box %q before update: %w", definition.Name, err)
+	}
+
+	return s.save(definition)
+}
+
+func (s Store) save(definition box.Definition) error {
+	path := s.definitionPath(definition.Name)
 	data, err := toml.Marshal(definition)
 	if err != nil {
 		return fmt.Errorf("encode definition: %w", err)

@@ -17,7 +17,11 @@ func newListCommand(definitions definitionStore) *cobra.Command {
 				return err
 			}
 			for _, definition := range items {
-				if _, err := fmt.Fprintf(command.OutOrStdout(), "%s\t%s\n", definition.Name, definition.State); err != nil {
+				image := definition.Configuration.Image
+				if image == "" {
+					image = "-"
+				}
+				if _, err := fmt.Fprintf(command.OutOrStdout(), "%s\t%s\t%s\n", definition.Name, definition.State, image); err != nil {
 					return err
 				}
 			}

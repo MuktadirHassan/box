@@ -22,6 +22,7 @@ func newRootCommand(definitions definitionStore) *cobra.Command {
 
 	command.AddCommand(
 		newCreateCommand(definitions),
+		newSetupCommand(definitions),
 		newListCommand(definitions),
 		newInspectCommand(definitions),
 		newDeleteCommand(definitions),

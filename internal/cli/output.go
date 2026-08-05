@@ -8,6 +8,40 @@ import (
 )
 
 func writeDefinition(writer io.Writer, definition box.Definition) error {
-	_, err := fmt.Fprintf(writer, "name: %s\nstate: %s\nversion: %d\n", definition.Name, definition.State, definition.Version)
-	return err
+	if _, err := fmt.Fprintf(writer, "name: %s\nstate: %s\nversion: %d\n", definition.Name, definition.State, definition.Version); err != nil {
+		return err
+	}
+	if definition.State != box.ReadyState {
+		return nil
+	}
+
+	configuration := definition.Configuration
+	if _, err := fmt.Fprintf(writer, "image: %s\nnetwork: %s\npersistent home: %t\npersistent caches: %t\n", configuration.Image, configuration.Network, configuration.Home.Enabled, configuration.Caches.Enabled); err != nil {
+		return err
+	}
+	if configuration.Limits.CPUs != "" {
+		if _, err := fmt.Fprintf(writer, "cpus: %s\n", configuration.Limits.CPUs); err != nil {
+			return err
+		}
+	}
+	if configuration.Limits.Memory != "" {
+		if _, err := fmt.Fprintf(writer, "memory: %s\n", configuration.Limits.Memory); err != nil {
+			return err
+		}
+	}
+	if configuration.Limits.PIDsLimit != 0 {
+		if _, err := fmt.Fprintf(writer, "pids limit: %d\n", configuration.Limits.PIDsLimit); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintf(writer, "wayland: %t\nssh agent: %t\n", configuration.Integrations.Wayland, configuration.Integrations.SSHAgent); err != nil {
+		return err
+	}
+	for _, mount := range configuration.Mounts {
+		if _, err := fmt.Fprintf(writer, "mount: %s:%s\n", mount.Source, mount.Destination); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
