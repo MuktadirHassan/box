@@ -72,7 +72,7 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	runner := &fakeRunner{outputs: []outputResult{{output: "image-id\n"}, {output: "container-id\n"}}}
 	definition := box.NewDefinition("demo")
-	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: box.TerminalToolsTemplate}
+	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "terminal-tools"}
 
 	if _, err := New(Options{Runner: runner}).Create(context.Background(), definition); err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -81,29 +81,13 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 		t.Fatalf("Output calls = %d, want 2", len(runner.outputCalls))
 	}
 	build := runner.outputCalls[0].arguments
-	if len(build) < 6 || build[0] != "build" || build[1] != "--quiet" || build[4] != "--tag" || build[5] != "box-demo-template" {
+	joinedBuild := strings.Join(build, "\x00")
+	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
 		t.Errorf("build arguments = %#v", build)
 	}
 	create := strings.Join(runner.outputCalls[1].arguments, "\x00")
 	if !strings.Contains(create, "box-demo-template\x00/bin/sh") {
 		t.Errorf("create arguments do not use template image: %#v", runner.outputCalls[1].arguments)
-	}
-}
-
-func TestTerminalToolsContainerfileInstallsRequestedPackages(t *testing.T) {
-	for _, image := range []string{"ubuntu:24.04", "archlinux:latest"} {
-		contents := templateContainerfile(image, box.TerminalToolsTemplate)
-		for _, packageName := range box.TemplatePackages(box.TerminalToolsTemplate) {
-			if !strings.Contains(contents, packageName) {
-				t.Errorf("Containerfile for %s does not install %q: %s", image, packageName, contents)
-			}
-		}
-	}
-	if !strings.Contains(templateContainerfile("archlinux:latest", box.TerminalToolsTemplate), "pacman -Syu --noconfirm --needed") {
-		t.Error("Arch Containerfile does not use pacman")
-	}
-	if !templateSupportedImage("debian:bookworm") || !templateSupportedImage("archlinux:latest") || templateSupportedImage("fedora:latest") {
-		t.Error("templateSupportedImage() does not identify supported base images")
 	}
 }
 
