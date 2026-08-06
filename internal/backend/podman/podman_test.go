@@ -69,6 +69,39 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	}
 }
 
+func TestCreateBuildsSelectedTemplate(t *testing.T) {
+	runner := &fakeRunner{outputs: []outputResult{{output: "image-id\n"}, {output: "container-id\n"}}}
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: box.TerminalToolsTemplate}
+
+	if _, err := New(Options{Runner: runner}).Create(context.Background(), definition); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if len(runner.outputCalls) != 2 {
+		t.Fatalf("Output calls = %d, want 2", len(runner.outputCalls))
+	}
+	build := runner.outputCalls[0].arguments
+	if len(build) < 6 || build[0] != "build" || build[1] != "--quiet" || build[4] != "--tag" || build[5] != "box-demo-template" {
+		t.Errorf("build arguments = %#v", build)
+	}
+	create := strings.Join(runner.outputCalls[1].arguments, "\x00")
+	if !strings.Contains(create, "box-demo-template\x00/bin/sh") {
+		t.Errorf("create arguments do not use template image: %#v", runner.outputCalls[1].arguments)
+	}
+}
+
+func TestTerminalToolsContainerfileInstallsRequestedPackages(t *testing.T) {
+	contents := templateContainerfile("ubuntu:24.04", box.TerminalToolsTemplate)
+	for _, packageName := range box.TemplatePackages(box.TerminalToolsTemplate) {
+		if !strings.Contains(contents, packageName) {
+			t.Errorf("Containerfile does not install %q: %s", packageName, contents)
+		}
+	}
+	if !templateSupportedImage("debian:bookworm") || templateSupportedImage("archlinux:latest") {
+		t.Error("templateSupportedImage() does not identify supported base images")
+	}
+}
+
 func TestCreateRejectsUnsafeConfiguration(t *testing.T) {
 	backend := New(Options{Runner: &fakeRunner{}})
 	definition := box.NewDefinition("demo")

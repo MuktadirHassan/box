@@ -53,7 +53,14 @@ func (b *Backend) Create(ctx context.Context, definition box.Definition) (box.Ru
 	if err := box.ValidateName(definition.Name); err != nil {
 		return box.RuntimeMetadata{}, err
 	}
-	arguments, err := b.createArguments(definition)
+	if err := validateConfiguration(definition.Configuration); err != nil {
+		return box.RuntimeMetadata{}, err
+	}
+	runtimeDefinition, err := b.buildTemplate(ctx, definition)
+	if err != nil {
+		return box.RuntimeMetadata{}, err
+	}
+	arguments, err := b.createArguments(runtimeDefinition)
 	if err != nil {
 		return box.RuntimeMetadata{}, err
 	}
