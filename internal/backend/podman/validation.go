@@ -85,6 +85,8 @@ func cacheVolumeName(name string) string { return containerName(name) + "-cache"
 
 func containerHome(user string) string { return "/home/" + user }
 
+func containerUser(uid, gid int) string { return fmt.Sprintf("%d:%d", uid, gid) }
+
 func passwdEntry(user, home string, uid, gid int) string {
 	return fmt.Sprintf("%s:x:%d:%d::%s:/bin/sh", user, uid, gid, home)
 }

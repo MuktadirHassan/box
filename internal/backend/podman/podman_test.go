@@ -3,7 +3,9 @@ package podman
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -56,13 +58,13 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	}
 	arguments := runner.outputCalls[0].arguments
 	joined := strings.Join(arguments, "\x00")
-	for _, want := range []string{"--user\x00dev", "dev:x:1000:1000::/home/dev:/bin/sh", "HOME=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
+	for _, want := range []string{fmt.Sprintf("--user\x00%d:%d", os.Getuid(), os.Getgid()), fmt.Sprintf("dev:x:%d:%d::/home/dev:/bin/sh", os.Getuid(), os.Getgid()), "HOME=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("arguments missing %q: %#v", want, arguments)
 		}
 	}
-	if strings.Contains(joined, "keep-id") {
-		t.Errorf("arguments unexpectedly couple identity to host: %#v", arguments)
+	if !strings.Contains(joined, "--userns\x00keep-id") {
+		t.Errorf("arguments do not preserve the invoking user's identity: %#v", arguments)
 	}
 }
 
@@ -124,6 +126,25 @@ func TestEnterOnlyStartsKnownStoppedStates(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []commandCall{{arguments: []string{"start", "--attach", "--interactive", "container-id"}}}
+	if !reflect.DeepEqual(runner.runCalls, want) {
+		t.Errorf("Run calls = %#v, want %#v", runner.runCalls, want)
+	}
+}
+
+func TestDeletePurgeRemovesOnlyEnabledManagedVolumes(t *testing.T) {
+	runner := &fakeRunner{}
+	definition := box.NewDefinition("demo")
+	definition.Configuration.Home.Enabled = true
+	definition.Configuration.Caches.Enabled = true
+	metadata := box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id"}
+	if err := New(Options{Runner: runner}).Delete(context.Background(), definition, metadata); err != nil {
+		t.Fatalf("Delete() error = %v", err)
+	}
+	want := []commandCall{
+		{arguments: []string{"rm", "--force", "container-id"}},
+		{arguments: []string{"volume", "rm", "box-demo-home"}},
+		{arguments: []string{"volume", "rm", "box-demo-cache"}},
+	}
 	if !reflect.DeepEqual(runner.runCalls, want) {
 		t.Errorf("Run calls = %#v, want %#v", runner.runCalls, want)
 	}

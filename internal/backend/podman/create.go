@@ -2,15 +2,11 @@ package podman
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
 	"github.com/MuktadirHassan/box/internal/box"
-)
-
-const (
-	containerUID = 1000
-	containerGID = 1000
 )
 
 func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
@@ -22,8 +18,8 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	home := containerHome(configuration.User)
 	arguments := []string{
 		"create", "--tty", "--name", containerName(definition.Name),
-		"--userns", "auto", "--user", configuration.User,
-		"--passwd-entry", passwdEntry(configuration.User, home, containerUID, containerGID),
+		"--userns", "keep-id", "--user", containerUser(os.Getuid(), os.Getgid()),
+		"--passwd-entry", passwdEntry(configuration.User, home, os.Getuid(), os.Getgid()),
 		"--env", "HOME=" + home, "--env", "USER=" + configuration.User, "--env", "LOGNAME=" + configuration.User,
 		"--workdir", home, "--hostname", definition.Name,
 		"--network", networkMode(configuration.Network), "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
