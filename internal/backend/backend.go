@@ -14,7 +14,7 @@ type Backend interface {
 	Start(context.Context, box.RuntimeMetadata) error
 	Stop(context.Context, box.RuntimeMetadata) error
 	Inspect(context.Context, box.RuntimeMetadata) (box.RuntimeStatus, error)
-	Delete(context.Context, box.RuntimeMetadata) error
+	Delete(context.Context, box.Definition, box.RuntimeMetadata) error
 	Enter(context.Context, box.RuntimeMetadata) error
 	Exec(context.Context, box.RuntimeMetadata, []string) error
 }
