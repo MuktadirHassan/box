@@ -22,9 +22,11 @@ func (testBackend) Stop(context.Context, box.RuntimeMetadata) error  { return ni
 func (testBackend) Inspect(context.Context, box.RuntimeMetadata) (box.RuntimeStatus, error) {
 	return box.RuntimeStatus{}, nil
 }
-func (testBackend) Delete(context.Context, box.Definition, box.RuntimeMetadata) error { return nil }
-func (testBackend) Enter(context.Context, box.RuntimeMetadata) error                  { return nil }
-func (testBackend) Exec(context.Context, box.RuntimeMetadata, []string) error         { return nil }
+func (testBackend) Delete(context.Context, box.Definition, box.RuntimeMetadata, DeleteOptions) error {
+	return nil
+}
+func (testBackend) Enter(context.Context, box.RuntimeMetadata) error          { return nil }
+func (testBackend) Exec(context.Context, box.RuntimeMetadata, []string) error { return nil }
 
 func TestRegistryReturnsRegisteredBackend(t *testing.T) {
 	podman := testBackend{name: box.PodmanBackend}

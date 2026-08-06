@@ -7,6 +7,10 @@ import (
 	"github.com/MuktadirHassan/box/internal/box"
 )
 
+type DeleteOptions struct {
+	RemovePersistentData bool
+}
+
 type Backend interface {
 	Name() box.Backend
 	Validate(context.Context) error
@@ -14,7 +18,7 @@ type Backend interface {
 	Start(context.Context, box.RuntimeMetadata) error
 	Stop(context.Context, box.RuntimeMetadata) error
 	Inspect(context.Context, box.RuntimeMetadata) (box.RuntimeStatus, error)
-	Delete(context.Context, box.Definition, box.RuntimeMetadata) error
+	Delete(context.Context, box.Definition, box.RuntimeMetadata, DeleteOptions) error
 	Enter(context.Context, box.RuntimeMetadata) error
 	Exec(context.Context, box.RuntimeMetadata, []string) error
 }
