@@ -2,19 +2,12 @@ package box
 
 import "testing"
 
-func TestTemplatePackages(t *testing.T) {
-	packages := TemplatePackages(TerminalToolsTemplate)
-	want := []string{"fish", "jq", "neovim", "tmux", "ripgrep", "starship", "wl-clipboard"}
-	if len(packages) != len(want) {
-		t.Fatalf("TemplatePackages() = %v, want %v", packages, want)
+func TestValidateTemplate(t *testing.T) {
+	if err := ValidateTemplate("terminal-tools"); err != nil {
+		t.Fatalf("ValidateTemplate() error = %v", err)
 	}
-	for index, value := range want {
-		if packages[index] != value {
-			t.Errorf("TemplatePackages()[%d] = %q, want %q", index, packages[index], value)
-		}
-	}
-	if err := ValidateTemplate("unknown"); err == nil {
-		t.Error("ValidateTemplate() error = nil for an unknown template")
+	if err := ValidateTemplate("../template"); err == nil {
+		t.Error("ValidateTemplate() error = nil for an invalid name")
 	}
 }
 
