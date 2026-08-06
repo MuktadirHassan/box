@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.1](https://github.com/MuktadirHassan/box/compare/v0.1.0...v0.1.1) (2026-08-06)
+
+
+### docs
+
+* reorganize README ([9cc679d](https://github.com/MuktadirHassan/box/commit/9cc679d881a914e5636a5a42405070eaedb2108a))
+
+
+### Features
+
+* add verified release installer ([#5](https://github.com/MuktadirHassan/box/issues/5)) ([887fe1f](https://github.com/MuktadirHassan/box/commit/887fe1f30e49f170172c41744c4b8f0a78de4c6d))
+
 ## 0.1.0 (2026-08-06)
 
 
