@@ -27,6 +27,7 @@ func NewRootCommand(definitions definitionStore, runtimes *backend.Registry, pre
 		newExecCommand(definitions, runtimes),
 		newStopCommand(definitions, runtimes),
 		newDeleteCommand(definitions, runtimes),
+		newCompletionCommand(),
 	)
 
 	return command

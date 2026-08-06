@@ -131,7 +131,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := NewRootCommand(definitions, registry)
-	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--template", "terminal-tools", "--clipboard", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--template", "terminal-tools", "--shell", "fish", "--prompt", "starship", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -149,8 +149,11 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if definition.Configuration.User != "tamim" {
 		t.Errorf("User = %q, want tamim", definition.Configuration.User)
 	}
-	if definition.Configuration.Image != "archlinux:latest" {
-		t.Errorf("Image = %q, want archlinux:latest", definition.Configuration.Image)
+	if definition.Configuration.Image != "ubuntu:24.04" {
+		t.Errorf("Image = %q, want ubuntu:24.04", definition.Configuration.Image)
+	}
+	if definition.Configuration.Shell != "fish" || definition.Configuration.Prompt != "starship" {
+		t.Errorf("shell configuration = %q/%q, want fish/starship", definition.Configuration.Shell, definition.Configuration.Prompt)
 	}
 	if definition.Configuration.Limits.Memory != "4g" || definition.Configuration.Limits.PIDsLimit != 512 {
 		t.Errorf("Limits = %#v, want memory 4g and pids 512", definition.Configuration.Limits)
