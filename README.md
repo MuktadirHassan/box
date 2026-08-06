@@ -2,6 +2,12 @@
 
 A Linux CLI for creating persistent, rootless Podman development environments.
 
+> **Status: alpha.** Box is pre-1.0 software. It is usable for experimentation, but interfaces, configuration, and behavior may change without migration support. Do not rely on it for critical workloads yet.
+
+## Versioning
+
+Box follows [Semantic Versioning](https://semver.org/). The first release is `v0.1.0`. Until `v1.0.0`, minor versions may include breaking changes; patch versions contain compatible fixes. See [Releases](https://github.com/MuktadirHassan/box/releases) for changes and upgrade notes.
+
 ## Requirements
 
 - Linux
