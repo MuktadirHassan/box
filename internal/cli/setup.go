@@ -155,7 +155,7 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 	flags.StringVar(&options.memory, "memory", "", "memory limit")
 	flags.IntVar(&options.pids, "pids-limit", 0, "process limit")
 	flags.StringVar(&options.network, "network", "", "network policy: outbound or none")
-	flags.StringVar(&options.template, "template", "", "environment template: terminal-tools")
+	flags.StringVar(&options.template, "template", "", "environment template name")
 	flags.BoolVar(&options.clipboard, "clipboard", false, "enable host clipboard integration")
 	flags.BoolVar(&options.sshAgent, "ssh-agent", false, "enable SSH agent forwarding")
 	flags.BoolVar(&options.yes, "yes", false, "save the displayed configuration")

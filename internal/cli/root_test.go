@@ -142,8 +142,8 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if !definition.Configuration.Integrations.Clipboard {
 		t.Error("Clipboard = false, want true")
 	}
-	if definition.Configuration.Template != box.TerminalToolsTemplate {
-		t.Errorf("Template = %q, want %q", definition.Configuration.Template, box.TerminalToolsTemplate)
+	if definition.Configuration.Template != "terminal-tools" {
+		t.Errorf("Template = %q, want %q", definition.Configuration.Template, "terminal-tools")
 	}
 	if mounts := definition.Configuration.Mounts; len(mounts) != 1 || mounts[0] != (box.Mount{Source: "/work", Destination: "/workspace"}) {
 		t.Errorf("Mounts = %#v, want /work:/workspace", mounts)
