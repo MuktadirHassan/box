@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -105,6 +106,34 @@ func TestLoadReturnsExpectedDefinition(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Load() = %#v, want %#v", got, want)
+	}
+}
+
+func TestMetadataRoundTrip(t *testing.T) {
+	definitions := newTestStore(t)
+	if err := definitions.Create(definition("demo")); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	want := box.Metadata{Runtime: box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id", State: box.RuntimeCreated}}
+	if err := definitions.SaveMetadata("demo", want); err != nil {
+		t.Fatalf("SaveMetadata() error = %v", err)
+	}
+	got, err := definitions.LoadMetadata("demo")
+	if err != nil {
+		t.Fatalf("LoadMetadata() error = %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("LoadMetadata() = %#v, want %#v", got, want)
+	}
+}
+
+func TestLoadMetadataReportsMissingMetadata(t *testing.T) {
+	definitions := newTestStore(t)
+	if err := definitions.Create(definition("demo")); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if _, err := definitions.LoadMetadata("demo"); !errors.Is(err, store.ErrMetadataNotFound) {
+		t.Errorf("LoadMetadata() error = %v, want ErrMetadataNotFound", err)
 	}
 }
 

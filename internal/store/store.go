@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,7 +13,10 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-const definitionFile = "box.toml"
+const (
+	definitionFile = "box.toml"
+	metadataFile   = "metadata.json"
+)
 
 type Store struct {
 	root string
@@ -137,6 +141,56 @@ func (s Store) Load(name string) (box.Definition, error) {
 	return definition, nil
 }
 
+func (s Store) SaveMetadata(name string, metadata box.Metadata) error {
+	if err := box.ValidateName(name); err != nil {
+		return err
+	}
+	data, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("encode runtime metadata: %w", err)
+	}
+	path := s.metadataPath(name)
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".metadata.json-*")
+	if err != nil {
+		return fmt.Errorf("create temporary metadata: %w", err)
+	}
+	temporaryPath := temporary.Name()
+	defer os.Remove(temporaryPath)
+	if err := temporary.Chmod(0o600); err != nil {
+		temporary.Close()
+		return fmt.Errorf("set temporary metadata permissions: %w", err)
+	}
+	if _, err := temporary.Write(data); err != nil {
+		temporary.Close()
+		return fmt.Errorf("write runtime metadata: %w", err)
+	}
+	if err := temporary.Close(); err != nil {
+		return fmt.Errorf("close temporary metadata: %w", err)
+	}
+	if err := os.Rename(temporaryPath, path); err != nil {
+		return fmt.Errorf("save runtime metadata: %w", err)
+	}
+	return nil
+}
+
+func (s Store) LoadMetadata(name string) (box.Metadata, error) {
+	if err := box.ValidateName(name); err != nil {
+		return box.Metadata{}, err
+	}
+	data, err := os.ReadFile(s.metadataPath(name))
+	if errors.Is(err, fs.ErrNotExist) {
+		return box.Metadata{}, ErrMetadataNotFound
+	}
+	if err != nil {
+		return box.Metadata{}, fmt.Errorf("load runtime metadata for box %q: %w", name, err)
+	}
+	var metadata box.Metadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return box.Metadata{}, fmt.Errorf("decode runtime metadata for box %q: %w", name, err)
+	}
+	return metadata, nil
+}
+
 func (s Store) Delete(name string) error {
 	if err := box.ValidateName(name); err != nil {
 		return err
@@ -154,4 +208,8 @@ func (s Store) boxPath(name string) string {
 
 func (s Store) definitionPath(name string) string {
 	return filepath.Join(s.boxPath(name), definitionFile)
+}
+
+func (s Store) metadataPath(name string) string {
+	return filepath.Join(s.boxPath(name), metadataFile)
 }
