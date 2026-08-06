@@ -2,6 +2,7 @@
   "packages": {
     ".": {
       "release-type": "go",
+      "initial-version": "0.1.0",
       "package-name": "box",
       "include-component-in-tag": false,
       "changelog-sections": [
