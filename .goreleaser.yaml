@@ -1,0 +1,27 @@
+version: 2
+
+builds:
+  - id: box
+    main: .
+    binary: box
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/MuktadirHassan/box/internal/version.Version={{ .Version }}
+
+archives:
+  - id: box
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  prerelease: auto

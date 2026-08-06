@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/ui"
+	"github.com/MuktadirHassan/box/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -12,8 +13,9 @@ func NewRootCommand(definitions definitionStore, runtimes *backend.Registry, pre
 		presenter = presenters[0]
 	}
 	command := &cobra.Command{
-		Use:   "box",
-		Short: "Manage development boxes",
+		Use:     "box",
+		Short:   "Manage development boxes",
+		Version: version.Version,
 	}
 
 	command.AddCommand(
