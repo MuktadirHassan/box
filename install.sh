@@ -5,7 +5,7 @@ repo="MuktadirHassan/box"
 version="latest"
 arch=""
 install_dir="${BOX_INSTALL_DIR:-$HOME/.local/bin}"
-completion_shell="none"
+completion_shell="all"
 
 usage() {
 	cat <<'EOF'
@@ -17,7 +17,8 @@ Options:
   --version VERSION    Release version, with or without a leading v
   --arch ARCH          amd64 or arm64; defaults to the current machine
   --install-dir DIR    Destination directory (default: ~/.local/bin)
-  --shell SHELL        Install completions for bash, fish, zsh, all, or none (default: none)
+  --shell SHELL        Install completions for bash, fish, zsh, all, or none (default: all)
+  --no-completions     Do not install shell completions
   -h, --help           Show this help message
 EOF
 }
@@ -52,6 +53,10 @@ while [ "$#" -gt 0 ]; do
 			[ "$#" -ge 2 ] || die "--shell requires a value"
 			completion_shell=$2
 			shift 2
+			;;
+		--no-completions)
+			completion_shell="none"
+			shift
 			;;
 		-h|--help)
 			usage
