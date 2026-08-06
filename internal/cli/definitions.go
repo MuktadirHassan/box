@@ -8,4 +8,6 @@ type definitionStore interface {
 	List() ([]box.Definition, error)
 	Load(string) (box.Definition, error)
 	Delete(string) error
+	SaveMetadata(string, box.Metadata) error
+	LoadMetadata(string) (box.Metadata, error)
 }
