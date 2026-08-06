@@ -5,6 +5,7 @@ repo="MuktadirHassan/box"
 version="latest"
 arch=""
 install_dir="${BOX_INSTALL_DIR:-$HOME/.local/bin}"
+install_completions=true
 
 usage() {
 	cat <<'EOF'
@@ -16,6 +17,7 @@ Options:
   --version VERSION    Release version, with or without a leading v
   --arch ARCH          amd64 or arm64; defaults to the current machine
   --install-dir DIR    Destination directory (default: ~/.local/bin)
+  --no-completions     Do not install Fish and Bash completions
   -h, --help           Show this help message
 EOF
 }
@@ -45,6 +47,10 @@ while [ "$#" -gt 0 ]; do
 			[ "$#" -ge 2 ] || die "--install-dir requires a value"
 			install_dir=$2
 			shift 2
+			;;
+		--no-completions)
+			install_completions=false
+			shift
 			;;
 		-h|--help)
 			usage
@@ -103,6 +109,17 @@ printf '%s\n' "$checksum" | (cd "$tmp_dir" && sha256sum --check --status -) || d
 tar -xzf "$tmp_dir/$archive" -C "$tmp_dir"
 [ -f "$tmp_dir/box" ] || die "release archive does not contain box"
 install -Dm755 "$tmp_dir/box" "$install_dir/box"
+
+if [ "$install_completions" = true ]; then
+	fish_completions_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions"
+	bash_completions_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+	zsh_completions_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+	mkdir -p "$fish_completions_dir" "$bash_completions_dir" "$zsh_completions_dir"
+	"$install_dir/box" completion fish > "$fish_completions_dir/box.fish"
+	"$install_dir/box" completion bash > "$bash_completions_dir/box"
+	"$install_dir/box" completion zsh > "$zsh_completions_dir/_box"
+	printf 'Installed Fish, Bash, and Zsh completions.\n'
+fi
 
 printf 'Installed Box %s to %s/box\n' "$tag" "$install_dir"
 case ":$PATH:" in

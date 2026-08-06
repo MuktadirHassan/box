@@ -17,7 +17,7 @@ Install the latest release for your architecture:
 curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh
 ```
 
-The script downloads the archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`.
+The script downloads the archive and `checksums.txt`, verifies the archive, installs `box` to `~/.local/bin`, and generates Fish, Bash, and Zsh completions. Pass `--no-completions` to skip completion installation.
 
 To install a specific version or use another destination:
 
@@ -25,6 +25,15 @@ To install a specific version or use another destination:
 curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh -s -- \
   --version 0.1.0 \
   --install-dir /usr/local/bin
+```
+
+### Zsh setup
+
+Fish loads its completion automatically. For Zsh, add this before `compinit` in `~/.zshrc`:
+
+```zsh
+fpath=("${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions" $fpath)
+autoload -Uz compinit && compinit
 ```
 
 ### Manual installation
@@ -85,9 +94,12 @@ Remove only the Box binary:
 
 ```bash
 rm -f "${BOX_INSTALL_DIR:-$HOME/.local/bin}/box"
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions/box.fish"
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/box"
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions/_box"
 ```
 
-This keeps environments and their data.
+This removes the binary and installed completions, while keeping environments and their data.
 
 ### Remove an environment
 
