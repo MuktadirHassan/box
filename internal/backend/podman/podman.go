@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 )
 
@@ -90,7 +91,7 @@ func (b *Backend) Inspect(ctx context.Context, metadata box.RuntimeMetadata) (bo
 	return box.RuntimeStatus{State: state}, nil
 }
 
-func (b *Backend) Delete(ctx context.Context, definition box.Definition, metadata box.RuntimeMetadata) error {
+func (b *Backend) Delete(ctx context.Context, definition box.Definition, metadata box.RuntimeMetadata, options backend.DeleteOptions) error {
 	if definition.Backend != box.PodmanBackend {
 		return fmt.Errorf("delete Podman runtime for backend %q", definition.Backend)
 	}
@@ -102,6 +103,9 @@ func (b *Backend) Delete(ctx context.Context, definition box.Definition, metadat
 	}
 	if err := b.runner.Run(ctx, "rm", "--force", metadata.ID); err != nil {
 		return fmt.Errorf("delete Podman runtime: %w", err)
+	}
+	if !options.RemovePersistentData {
+		return nil
 	}
 	if definition.Configuration.Home.Enabled {
 		if err := b.runner.Run(ctx, "volume", "rm", homeVolumeName(definition.Name)); err != nil {

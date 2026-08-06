@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 )
 
@@ -137,7 +138,7 @@ func TestDeletePurgeRemovesOnlyEnabledManagedVolumes(t *testing.T) {
 	definition.Configuration.Home.Enabled = true
 	definition.Configuration.Caches.Enabled = true
 	metadata := box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id"}
-	if err := New(Options{Runner: runner}).Delete(context.Background(), definition, metadata); err != nil {
+	if err := New(Options{Runner: runner}).Delete(context.Background(), definition, metadata, backend.DeleteOptions{RemovePersistentData: true}); err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}
 	want := []commandCall{
@@ -145,6 +146,21 @@ func TestDeletePurgeRemovesOnlyEnabledManagedVolumes(t *testing.T) {
 		{arguments: []string{"volume", "rm", "box-demo-home"}},
 		{arguments: []string{"volume", "rm", "box-demo-cache"}},
 	}
+	if !reflect.DeepEqual(runner.runCalls, want) {
+		t.Errorf("Run calls = %#v, want %#v", runner.runCalls, want)
+	}
+}
+
+func TestDeleteForRecreationPreservesManagedVolumes(t *testing.T) {
+	runner := &fakeRunner{}
+	definition := box.NewDefinition("demo")
+	definition.Configuration.Home.Enabled = true
+	definition.Configuration.Caches.Enabled = true
+	metadata := box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id"}
+	if err := New(Options{Runner: runner}).Delete(context.Background(), definition, metadata, backend.DeleteOptions{}); err != nil {
+		t.Fatalf("Delete() error = %v", err)
+	}
+	want := []commandCall{{arguments: []string{"rm", "--force", "container-id"}}}
 	if !reflect.DeepEqual(runner.runCalls, want) {
 		t.Errorf("Run calls = %#v, want %#v", runner.runCalls, want)
 	}
