@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/MuktadirHassan/box/internal/backend"
+	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
 	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
@@ -28,6 +29,9 @@ func newInspectCommand(definitions definitionStore, runtimes *backend.Registry, 
 			}
 			metadata, err := definitions.LoadMetadata(definition.Name)
 			if errors.Is(err, store.ErrMetadataNotFound) {
+				if presenter != nil {
+					return presenter.ShowRuntime(command.OutOrStdout(), box.RuntimeMissing, "")
+				}
 				_, err = fmt.Fprintln(command.OutOrStdout(), "runtime: not created")
 				return err
 			}
@@ -35,6 +39,9 @@ func newInspectCommand(definitions definitionStore, runtimes *backend.Registry, 
 				return err
 			}
 			if runtimes == nil {
+				if presenter != nil {
+					return presenter.ShowRuntime(command.OutOrStdout(), metadata.Runtime.State, "")
+				}
 				_, err = fmt.Fprintf(command.OutOrStdout(), "runtime: %s\n", metadata.Runtime.State)
 				return err
 			}
@@ -45,6 +52,9 @@ func newInspectCommand(definitions definitionStore, runtimes *backend.Registry, 
 			status, err := runtime.Inspect(context.Background(), metadata.Runtime)
 			if err != nil {
 				return err
+			}
+			if presenter != nil {
+				return presenter.ShowRuntime(command.OutOrStdout(), status.State, metadata.Runtime.ID)
 			}
 			_, err = fmt.Fprintf(command.OutOrStdout(), "runtime: %s\nruntime id: %s\n", status.State, metadata.Runtime.ID)
 			return err

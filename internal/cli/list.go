@@ -3,10 +3,11 @@ package cli
 import (
 	"fmt"
 
+	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
 
-func newListCommand(definitions definitionStore) *cobra.Command {
+func newListCommand(definitions definitionStore, presenter ui.Presenter) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List boxes",
@@ -15,6 +16,9 @@ func newListCommand(definitions definitionStore) *cobra.Command {
 			items, err := definitions.List()
 			if err != nil {
 				return err
+			}
+			if presenter != nil {
+				return presenter.ShowList(command.OutOrStdout(), items)
 			}
 			for _, definition := range items {
 				image := definition.Configuration.Image
@@ -25,7 +29,6 @@ func newListCommand(definitions definitionStore) *cobra.Command {
 					return err
 				}
 			}
-
 			return nil
 		},
 	}
