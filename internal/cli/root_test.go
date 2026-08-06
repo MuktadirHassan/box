@@ -9,7 +9,23 @@ import (
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/version"
 )
+
+func TestRootCommandReportsVersion(t *testing.T) {
+	command := NewRootCommand(store.New(filepath.Join(t.TempDir(), "boxes")), nil)
+	output := &bytes.Buffer{}
+	command.SetOut(output)
+	command.SetArgs([]string{"--version"})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("version command error = %v", err)
+	}
+	want := "box version " + version.Version + "\n"
+	if output.String() != want {
+		t.Errorf("version output = %q, want %q", output.String(), want)
+	}
+}
 
 func TestBoxLifecycleCommandsUseInjectedStore(t *testing.T) {
 	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
