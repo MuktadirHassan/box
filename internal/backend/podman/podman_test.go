@@ -91,13 +91,18 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 }
 
 func TestTerminalToolsContainerfileInstallsRequestedPackages(t *testing.T) {
-	contents := templateContainerfile("ubuntu:24.04", box.TerminalToolsTemplate)
-	for _, packageName := range box.TemplatePackages(box.TerminalToolsTemplate) {
-		if !strings.Contains(contents, packageName) {
-			t.Errorf("Containerfile does not install %q: %s", packageName, contents)
+	for _, image := range []string{"ubuntu:24.04", "archlinux:latest"} {
+		contents := templateContainerfile(image, box.TerminalToolsTemplate)
+		for _, packageName := range box.TemplatePackages(box.TerminalToolsTemplate) {
+			if !strings.Contains(contents, packageName) {
+				t.Errorf("Containerfile for %s does not install %q: %s", image, packageName, contents)
+			}
 		}
 	}
-	if !templateSupportedImage("debian:bookworm") || templateSupportedImage("archlinux:latest") {
+	if !strings.Contains(templateContainerfile("archlinux:latest", box.TerminalToolsTemplate), "pacman -Syu --noconfirm --needed") {
+		t.Error("Arch Containerfile does not use pacman")
+	}
+	if !templateSupportedImage("debian:bookworm") || !templateSupportedImage("archlinux:latest") || templateSupportedImage("fedora:latest") {
 		t.Error("templateSupportedImage() does not identify supported base images")
 	}
 }
