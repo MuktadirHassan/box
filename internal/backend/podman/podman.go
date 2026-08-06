@@ -90,8 +90,30 @@ func (b *Backend) Inspect(ctx context.Context, metadata box.RuntimeMetadata) (bo
 	return box.RuntimeStatus{State: state}, nil
 }
 
-func (b *Backend) Delete(ctx context.Context, metadata box.RuntimeMetadata) error {
-	return b.run(ctx, metadata, "rm", "--force", metadata.ID)
+func (b *Backend) Delete(ctx context.Context, definition box.Definition, metadata box.RuntimeMetadata) error {
+	if definition.Backend != box.PodmanBackend {
+		return fmt.Errorf("delete Podman runtime for backend %q", definition.Backend)
+	}
+	if err := box.ValidateName(definition.Name); err != nil {
+		return err
+	}
+	if err := b.validateMetadata(metadata); err != nil {
+		return err
+	}
+	if err := b.runner.Run(ctx, "rm", "--force", metadata.ID); err != nil {
+		return fmt.Errorf("delete Podman runtime: %w", err)
+	}
+	if definition.Configuration.Home.Enabled {
+		if err := b.runner.Run(ctx, "volume", "rm", homeVolumeName(definition.Name)); err != nil {
+			return fmt.Errorf("delete Podman home volume: %w", err)
+		}
+	}
+	if definition.Configuration.Caches.Enabled {
+		if err := b.runner.Run(ctx, "volume", "rm", cacheVolumeName(definition.Name)); err != nil {
+			return fmt.Errorf("delete Podman cache volume: %w", err)
+		}
+	}
+	return nil
 }
 
 func (b *Backend) Enter(ctx context.Context, metadata box.RuntimeMetadata) error {
