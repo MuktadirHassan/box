@@ -6,13 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
 )
 
 func TestBoxLifecycleCommandsUseInjectedStore(t *testing.T) {
 	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
-	command := newRootCommand(definitions)
+	command := NewRootCommand(definitions, nil)
 	output := &bytes.Buffer{}
 	command.SetOut(output)
 	command.SetErr(output)
@@ -39,7 +40,7 @@ func TestBoxLifecycleCommandsUseInjectedStore(t *testing.T) {
 	if err := command.Execute(); err != nil {
 		t.Fatalf("inspect command error = %v", err)
 	}
-	if output.String() != "name: demo\nstate: created\nbackend: podman\nversion: 1\n" {
+	if output.String() != "name: demo\nstate: created\nbackend: podman\nversion: 1\nruntime: not created\n" {
 		t.Errorf("inspect output = %q", output.String())
 	}
 
@@ -62,7 +63,7 @@ func TestSetupRequiresConfirmationBeforeSaving(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	command := newRootCommand(definitions)
+	command := NewRootCommand(definitions, nil)
 	output := &bytes.Buffer{}
 	command.SetOut(output)
 	command.SetErr(output)
@@ -90,7 +91,7 @@ func TestSetupGeneratesUserWithoutHostIdentity(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	command := newRootCommand(definitions)
+	command := NewRootCommand(definitions, nil)
 	output := &bytes.Buffer{}
 	command.SetOut(output)
 	command.SetArgs([]string{"setup", "demo"})
@@ -108,8 +109,13 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	command := newRootCommand(definitions)
-	command.SetArgs([]string{"setup", "demo", "--backend", "lima", "--image", "archlinux:latest", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--clipboard", "--yes"})
+	runtime := &recordingBackend{}
+	registry, err := backend.NewRegistry(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := NewRootCommand(definitions, registry)
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -121,8 +127,8 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if definition.State != box.ReadyState {
 		t.Errorf("State = %q, want %q", definition.State, box.ReadyState)
 	}
-	if definition.Backend != box.LimaBackend {
-		t.Errorf("Backend = %q, want %q", definition.Backend, box.LimaBackend)
+	if definition.Backend != box.PodmanBackend {
+		t.Errorf("Backend = %q, want %q", definition.Backend, box.PodmanBackend)
 	}
 	if definition.Configuration.User != "tamim" {
 		t.Errorf("User = %q, want tamim", definition.Configuration.User)
@@ -142,7 +148,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 }
 
 func TestDeleteRequiresPurge(t *testing.T) {
-	command := newRootCommand(store.New(filepath.Join(t.TempDir(), "boxes")))
+	command := NewRootCommand(store.New(filepath.Join(t.TempDir(), "boxes")), nil)
 	command.SetArgs([]string{"delete", "demo"})
 
 	err := command.Execute()

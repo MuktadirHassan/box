@@ -1,20 +1,11 @@
 package cli
 
 import (
-	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/spf13/cobra"
 )
 
-func Execute() error {
-	definitions, err := store.Default()
-	if err != nil {
-		return err
-	}
-
-	return newRootCommand(definitions).Execute()
-}
-
-func newRootCommand(definitions definitionStore) *cobra.Command {
+func NewRootCommand(definitions definitionStore, runtimes *backend.Registry) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "box",
 		Short: "Manage development boxes",
@@ -22,10 +13,13 @@ func newRootCommand(definitions definitionStore) *cobra.Command {
 
 	command.AddCommand(
 		newCreateCommand(definitions),
-		newSetupCommand(definitions),
+		newSetupCommand(definitions, runtimes),
 		newListCommand(definitions),
-		newInspectCommand(definitions),
-		newDeleteCommand(definitions),
+		newInspectCommand(definitions, runtimes),
+		newEnterCommand(definitions, runtimes),
+		newExecCommand(definitions, runtimes),
+		newStopCommand(definitions, runtimes),
+		newDeleteCommand(definitions, runtimes),
 	)
 
 	return command
