@@ -2,11 +2,14 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
+	"github.com/MuktadirHassan/box/internal/store"
 	"github.com/spf13/cobra"
 )
 
@@ -31,10 +34,11 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 		Short: "Configure a box",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
-			definition, err := definitions.Load(arguments[0])
+			previous, err := definitions.Load(arguments[0])
 			if err != nil {
 				return err
 			}
+			definition := previous
 
 			configuration, err := resolveConfiguration(command, definition.Configuration, options)
 			if err != nil {
@@ -52,8 +56,20 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 			definition.Configuration = configuration
 			definition.State = box.ReadyState
 
+			metadata, err := definitions.LoadMetadata(definition.Name)
+			hasRuntime := err == nil
+			if err != nil && !errors.Is(err, store.ErrMetadataNotFound) {
+				return err
+			}
+			recreate := hasRuntime && requiresRuntimeRecreation(previous, definition)
+
 			if err := writeDefinition(command.OutOrStdout(), definition); err != nil {
 				return err
+			}
+			if recreate {
+				if _, err := fmt.Fprintln(command.OutOrStdout(), "This change will recreate the runtime. Managed home and cache data will be preserved."); err != nil {
+					return err
+				}
 			}
 			if !options.yes {
 				return ErrSetupConfirmation
@@ -61,6 +77,11 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 			if runtimes == nil {
 				return fmt.Errorf("runtime setup is unavailable")
 			}
+			if hasRuntime && !recreate {
+				_, err := fmt.Fprintf(command.OutOrStdout(), "Box %q is already configured.\n", definition.Name)
+				return err
+			}
+
 			runtime, err := runtimes.Get(definition.Backend)
 			if err != nil {
 				return err
@@ -68,20 +89,35 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 			if err := runtime.Validate(context.Background()); err != nil {
 				return err
 			}
-			configured := definition
-			configured.State = box.CreatedState
-			if err := definitions.Update(configured); err != nil {
-				return err
+			if recreate {
+				oldRuntime, err := runtimes.Get(metadata.Runtime.Backend)
+				if err != nil {
+					return err
+				}
+				if err := oldRuntime.Delete(context.Background(), previous, metadata.Runtime, backend.DeleteOptions{}); err != nil {
+					return fmt.Errorf("remove existing runtime: %w", err)
+				}
 			}
-			metadata, err := runtime.Create(context.Background(), definition)
+
+			created, err := runtime.Create(context.Background(), definition)
 			if err != nil {
-				return err
+				if recreate {
+					metadata.Runtime.State = box.RuntimeMissing
+					if saveErr := definitions.SaveMetadata(definition.Name, metadata); saveErr != nil {
+						return fmt.Errorf("create replacement runtime: %w; record missing runtime: %v", err, saveErr)
+					}
+				}
+				return fmt.Errorf("create runtime: %w", err)
 			}
-			if err := definitions.SaveMetadata(definition.Name, box.Metadata{Runtime: metadata}); err != nil {
+			if err := definitions.SaveMetadata(definition.Name, box.Metadata{Runtime: created}); err != nil {
 				return fmt.Errorf("save runtime metadata: %w", err)
 			}
 			if err := definitions.Update(definition); err != nil {
 				return fmt.Errorf("mark box ready: %w", err)
+			}
+			if recreate {
+				_, err = fmt.Fprintf(command.OutOrStdout(), "Recreated box %q.\n", definition.Name)
+				return err
 			}
 			_, err = fmt.Fprintf(command.OutOrStdout(), "Configured and created box %q.\n", definition.Name)
 			return err
@@ -164,6 +200,10 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	}
 
 	return configuration, nil
+}
+
+func requiresRuntimeRecreation(previous, next box.Definition) bool {
+	return previous.Backend != next.Backend || !reflect.DeepEqual(previous.Configuration, next.Configuration)
 }
 
 func parseMounts(values []string) ([]box.Mount, error) {
