@@ -53,7 +53,8 @@ func (b *Backend) Create(ctx context.Context, definition box.Definition) (box.Ru
 	if err := box.ValidateName(definition.Name); err != nil {
 		return box.RuntimeMetadata{}, err
 	}
-	if err := validateConfiguration(definition.Configuration); err != nil {
+	definition.Configuration = box.NormalizeConfiguration(definition.Configuration)
+	if err := b.ValidateConfiguration(definition.Configuration); err != nil {
 		return box.RuntimeMetadata{}, err
 	}
 	runtimeDefinition, err := b.buildTemplate(ctx, definition)
@@ -127,14 +128,18 @@ func (b *Backend) Delete(ctx context.Context, definition box.Definition, metadat
 	return nil
 }
 
-func (b *Backend) Enter(ctx context.Context, metadata box.RuntimeMetadata) error {
+func (b *Backend) Enter(ctx context.Context, definition box.Definition, metadata box.RuntimeMetadata) error {
 	status, err := b.Inspect(ctx, metadata)
+	if err != nil {
+		return err
+	}
+	shell, err := shellPath(definition.Configuration.Shell)
 	if err != nil {
 		return err
 	}
 	switch status.State {
 	case box.RuntimeRunning:
-		return b.run(ctx, metadata, "exec", "--interactive", "--tty", metadata.ID, "/bin/sh")
+		return b.run(ctx, metadata, "exec", "--interactive", "--tty", metadata.ID, shell)
 	case box.RuntimeCreated, box.RuntimeStopped:
 		return b.run(ctx, metadata, "start", "--attach", "--interactive", metadata.ID)
 	default:

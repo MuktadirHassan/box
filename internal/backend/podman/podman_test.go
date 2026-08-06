@@ -72,7 +72,7 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	runner := &fakeRunner{outputs: []outputResult{{output: "image-id\n"}, {output: "container-id\n"}}}
 	definition := box.NewDefinition("demo")
-	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "terminal-tools"}
+	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "terminal-tools", Shell: "fish", Prompt: "starship"}
 
 	if _, err := New(Options{Runner: runner}).Create(context.Background(), definition); err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -82,12 +82,15 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	}
 	build := runner.outputCalls[0].arguments
 	joinedBuild := strings.Join(build, "\x00")
-	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
+	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
 		t.Errorf("build arguments = %#v", build)
 	}
 	create := strings.Join(runner.outputCalls[1].arguments, "\x00")
-	if !strings.Contains(create, "box-demo-template\x00/bin/sh") {
+	if !strings.Contains(create, "box-demo-template\x00/usr/bin/fish") {
 		t.Errorf("create arguments do not use template image: %#v", runner.outputCalls[1].arguments)
+	}
+	if !strings.Contains(create, "SHELL=/usr/bin/fish") || !strings.Contains(create, fmt.Sprintf("dev:x:%d:%d::/home/dev:/usr/bin/fish", os.Getuid(), os.Getgid())) {
+		t.Errorf("create arguments do not use fish consistently: %#v", runner.outputCalls[1].arguments)
 	}
 }
 
@@ -107,6 +110,14 @@ func TestCreateRejectsUnsafeConfiguration(t *testing.T) {
 	definition.Configuration.Mounts = []box.Mount{{Source: "relative", Destination: "/workspace"}}
 	if _, err := backend.Create(context.Background(), definition); err == nil {
 		t.Error("Create() error = nil for invalid mount")
+	}
+}
+
+func TestCreateRejectsTemplateOnlyShellsWithoutTemplate(t *testing.T) {
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{Image: "alpine:latest", User: "dev", Network: "outbound", Shell: "fish"}
+	if _, err := New(Options{Runner: &fakeRunner{}}).Create(context.Background(), definition); err == nil {
+		t.Fatal("Create() error = nil for fish without an environment template")
 	}
 }
 
@@ -145,7 +156,7 @@ func TestIntegrationsRequireRealSockets(t *testing.T) {
 func TestEnterOnlyStartsKnownStoppedStates(t *testing.T) {
 	runner := &fakeRunner{outputs: []outputResult{{output: "exited\n"}}}
 	metadata := box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "container-id"}
-	if err := New(Options{Runner: runner}).Enter(context.Background(), metadata); err != nil {
+	if err := New(Options{Runner: runner}).Enter(context.Background(), box.Definition{Configuration: box.DefaultConfiguration()}, metadata); err != nil {
 		t.Fatal(err)
 	}
 	want := []commandCall{{arguments: []string{"start", "--attach", "--interactive", "container-id"}}}

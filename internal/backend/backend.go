@@ -14,12 +14,13 @@ type DeleteOptions struct {
 type Backend interface {
 	Name() box.Backend
 	Validate(context.Context) error
+	ValidateConfiguration(box.Configuration) error
 	Create(context.Context, box.Definition) (box.RuntimeMetadata, error)
 	Start(context.Context, box.RuntimeMetadata) error
 	Stop(context.Context, box.RuntimeMetadata) error
 	Inspect(context.Context, box.RuntimeMetadata) (box.RuntimeStatus, error)
 	Delete(context.Context, box.Definition, box.RuntimeMetadata, DeleteOptions) error
-	Enter(context.Context, box.RuntimeMetadata) error
+	Enter(context.Context, box.Definition, box.RuntimeMetadata) error
 	Exec(context.Context, box.RuntimeMetadata, []string) error
 }
 

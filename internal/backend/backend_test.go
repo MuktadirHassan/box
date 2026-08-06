@@ -12,8 +12,9 @@ type testBackend struct {
 	name box.Backend
 }
 
-func (b testBackend) Name() box.Backend            { return b.name }
-func (testBackend) Validate(context.Context) error { return nil }
+func (b testBackend) Name() box.Backend                           { return b.name }
+func (testBackend) Validate(context.Context) error                { return nil }
+func (testBackend) ValidateConfiguration(box.Configuration) error { return nil }
 func (testBackend) Create(context.Context, box.Definition) (box.RuntimeMetadata, error) {
 	return box.RuntimeMetadata{}, nil
 }
@@ -25,8 +26,8 @@ func (testBackend) Inspect(context.Context, box.RuntimeMetadata) (box.RuntimeSta
 func (testBackend) Delete(context.Context, box.Definition, box.RuntimeMetadata, DeleteOptions) error {
 	return nil
 }
-func (testBackend) Enter(context.Context, box.RuntimeMetadata) error          { return nil }
-func (testBackend) Exec(context.Context, box.RuntimeMetadata, []string) error { return nil }
+func (testBackend) Enter(context.Context, box.Definition, box.RuntimeMetadata) error { return nil }
+func (testBackend) Exec(context.Context, box.RuntimeMetadata, []string) error        { return nil }
 
 func TestRegistryReturnsRegisteredBackend(t *testing.T) {
 	podman := testBackend{name: box.PodmanBackend}
