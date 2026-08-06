@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+if [ -d /usr/local/share/box-template/dotfiles ]; then
+	cp -Rn /usr/local/share/box-template/dotfiles/. "$HOME"/
+fi
+
+exec "$@"
