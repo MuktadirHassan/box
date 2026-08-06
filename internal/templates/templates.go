@@ -40,6 +40,15 @@ func Resolve(name, image string) (Template, error) {
 	return template, nil
 }
 
+// ValidateCompatibility verifies that a template supports the selected base image.
+func ValidateCompatibility(name, image string) error {
+	if name == "" {
+		return nil
+	}
+	_, err := Resolve(name, image)
+	return err
+}
+
 func load(name, family string) (Template, error) {
 	root := path.Join(name, family)
 	data, err := fs.ReadFile(files, path.Join(root, "template.toml"))

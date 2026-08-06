@@ -17,7 +17,15 @@ Install the latest release for your architecture:
 curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh
 ```
 
-The script downloads the archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`.
+The script downloads the archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`. Add `--shell bash`, `--shell fish`, `--shell zsh`, or `--shell all` to install user-level completions; the default leaves shell configuration untouched. Fish discovers its completion automatically. Bash requires the usual `bash-completion` user-completion support.
+
+Zsh does not normally search the XDG completion location installed by the script. Add this before `compinit` in your `.zshrc` when using `--shell zsh`:
+
+```zsh
+fpath=("${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions" $fpath)
+autoload -Uz compinit
+compinit
+```
 
 To install a specific version or use another destination:
 
@@ -62,8 +70,13 @@ box setup work \
   --mount "$HOME/projects:/workspace" \
   --cpus 4 \
   --memory 8g \
+  --template terminal-tools \
+  --shell fish \
+  --prompt starship \
   --yes
 ```
+
+`terminal-tools` currently supports Ubuntu images. It installs Bash, Fish, or Zsh as selected, and can add a Starship prompt without changing existing shell configuration. Use `box setup work --refresh-template --yes` after a template update to add new default files without overwriting files already in the persistent home.
 
 Run a command or manage environments:
 

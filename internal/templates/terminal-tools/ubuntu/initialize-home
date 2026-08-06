@@ -1,8 +1,23 @@
 #!/bin/sh
 set -eu
 
-if [ -d /usr/local/share/box-template/dotfiles ]; then
-	cp -Rn /usr/local/share/box-template/dotfiles/. "$HOME"/
+state_directory="$HOME/.local/state/box"
+marker="$state_directory/template-${BOX_TEMPLATE:-none}"
+revision="${BOX_TEMPLATE_REVISION:-0}"
+
+if [ ! -f "$marker" ] || [ "$(cat "$marker")" != "$revision" ]; then
+	if [ -d /usr/local/share/box-template/dotfiles ]; then
+		cp -Rn /usr/local/share/box-template/dotfiles/. "$HOME"/
+	fi
+	mkdir -p "$state_directory"
+	printf '%s\n' "$revision" > "$marker"
+fi
+
+if [ "${BOX_PROMPT:-none}" = "starship" ]; then
+	case "${SHELL:-}" in
+		*/bash) [ -e "$HOME/.bashrc" ] || printf 'eval "$(starship init bash)"\n' > "$HOME/.bashrc" ;;
+		*/zsh) [ -e "$HOME/.zshrc" ] || printf 'eval "$(starship init zsh)"\n' > "$HOME/.zshrc" ;;
+	esac
 fi
 
 exec "$@"
