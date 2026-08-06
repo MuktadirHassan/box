@@ -37,7 +37,9 @@ func (Presenter) ConfigureInitial(definition box.Definition) (box.Definition, er
 		huh.NewInput().Title("Base image").Description("The image used to create the development environment.").Value(&configuration.Image).Validate(nonEmpty("base image")),
 		huh.NewInput().Title("Linux user").Description("The user account created inside the box.").Value(&configuration.User).Validate(box.ValidateUser),
 		huh.NewSelect[string]().Title("Network policy").Options(huh.NewOption("Outbound network access", "outbound"), huh.NewOption("No network access", "none")).Value(&configuration.Network),
-		huh.NewSelect[string]().Title("Environment template").Description("Optional tools installed when the box is created; requires Ubuntu.").Options(templateOptions...).Value(&configuration.Template),
+		huh.NewSelect[string]().Title("Environment template").Description("Optional tools installed when the box is created; currently supports Ubuntu images.").Options(templateOptions...).Value(&configuration.Template),
+		huh.NewSelect[string]().Title("Interactive shell").Options(huh.NewOption("POSIX shell", "sh"), huh.NewOption("Bash", "bash"), huh.NewOption("Fish", "fish"), huh.NewOption("Zsh", "zsh")).Value(&configuration.Shell),
+		huh.NewSelect[string]().Title("Prompt").Options(huh.NewOption("No prompt customization", "none"), huh.NewOption("Starship", "starship")).Value(&configuration.Prompt),
 		huh.NewConfirm().Title("Persist the home directory?").Value(&configuration.Home.Enabled),
 		huh.NewConfirm().Title("Persist development caches?").Value(&configuration.Caches.Enabled),
 		huh.NewConfirm().Title("Enable clipboard integration?").Value(&configuration.Integrations.Clipboard),
@@ -83,7 +85,7 @@ func (Presenter) ShowDefinition(writer io.Writer, definition box.Definition) err
 	fields := [][2]string{{"State", string(definition.State)}, {"Backend", string(definition.Backend)}, {"Version", strconv.Itoa(definition.Version)}}
 	if definition.State == box.ReadyState {
 		configuration := definition.Configuration
-		fields = append(fields, [2]string{"Image", configuration.Image}, [2]string{"User", configuration.User}, [2]string{"Network", configuration.Network}, [2]string{"Template", configuration.Template}, [2]string{"Persistent home", strconv.FormatBool(configuration.Home.Enabled)}, [2]string{"Persistent caches", strconv.FormatBool(configuration.Caches.Enabled)}, [2]string{"Clipboard", strconv.FormatBool(configuration.Integrations.Clipboard)}, [2]string{"SSH agent", strconv.FormatBool(configuration.Integrations.SSHAgent)})
+		fields = append(fields, [2]string{"Image", configuration.Image}, [2]string{"User", configuration.User}, [2]string{"Network", configuration.Network}, [2]string{"Template", configuration.Template}, [2]string{"Shell", configuration.Shell}, [2]string{"Prompt", configuration.Prompt}, [2]string{"Persistent home", strconv.FormatBool(configuration.Home.Enabled)}, [2]string{"Persistent caches", strconv.FormatBool(configuration.Caches.Enabled)}, [2]string{"Clipboard", strconv.FormatBool(configuration.Integrations.Clipboard)}, [2]string{"SSH agent", strconv.FormatBool(configuration.Integrations.SSHAgent)})
 		for _, mount := range configuration.Mounts {
 			fields = append(fields, [2]string{"Mount", mount.Source + ":" + mount.Destination})
 		}
