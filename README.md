@@ -15,7 +15,23 @@ Box follows [Semantic Versioning](https://semver.org/). The first release is `v0
 
 ## Install
 
-Download the archive for your architecture from [Releases](https://github.com/MuktadirHassan/box/releases), verify it, and install it on your `PATH`:
+Install the latest release for your architecture:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh
+```
+
+The script downloads the release archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`. Use a specific version or a different destination when needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh -s -- \
+  --version 0.1.0 \
+  --install-dir /usr/local/bin
+```
+
+### Manual installation
+
+The installer performs the following steps. Download the archive for your architecture from [Releases](https://github.com/MuktadirHassan/box/releases), verify it, and install it on your `PATH`:
 
 ```bash
 VERSION=0.1.0 # replace with the release version, without "v"
@@ -28,6 +44,39 @@ tar -xzf "box_${VERSION}_linux_${ARCH}.tar.gz"
 install -Dm755 box "$HOME/.local/bin/box"
 
 box --version
+```
+
+## Upgrade
+
+Run the installer again to replace the binary. Box definitions remain in `~/.local/share/box/boxes/`. Because Box is alpha software, back up `~/.local/share/box/` before upgrading across minor versions.
+
+## Uninstall
+
+Remove only the Box binary:
+
+```bash
+rm -f "${BOX_INSTALL_DIR:-$HOME/.local/bin}/box"
+```
+
+This keeps your environments and their data. To permanently remove one environment, including its runtime and managed persistent data:
+
+```bash
+box delete <name> --purge
+```
+
+### Remove all Box data
+
+> **Warning:** This permanently deletes every Box environment, its managed persistent data, and saved definitions.
+
+Purge every environment before removing the remaining local data:
+
+```bash
+set -e
+for definition in "$HOME"/.local/share/box/boxes/*; do
+  [ -d "$definition" ] || continue
+  box delete "$(basename "$definition")" --purge
+done
+rm -rf "$HOME/.local/share/box"
 ```
 
 ## Build from source
