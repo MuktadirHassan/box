@@ -17,9 +17,9 @@ func NewRootCommand(definitions definitionStore, runtimes *backend.Registry, pre
 	}
 
 	command.AddCommand(
-		newCreateCommand(definitions),
+		newCreateCommand(definitions, presenter),
 		newSetupCommand(definitions, runtimes, presenter),
-		newListCommand(definitions),
+		newListCommand(definitions, presenter),
 		newInspectCommand(definitions, runtimes, presenter),
 		newEnterCommand(definitions, runtimes),
 		newExecCommand(definitions, runtimes),

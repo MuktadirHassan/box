@@ -6,12 +6,13 @@ import (
 
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 const generatedNameAttempts = 16
 
-func newCreateCommand(definitions definitionStore) *cobra.Command {
+func newCreateCommand(definitions definitionStore, presenter ui.Presenter) *cobra.Command {
 	return &cobra.Command{
 		Use:   "create [name]",
 		Short: "Create a box",
@@ -22,7 +23,11 @@ func newCreateCommand(definitions definitionStore) *cobra.Command {
 				return err
 			}
 
-			_, err = fmt.Fprintf(command.OutOrStdout(), "Created box %q. Next: box setup %s\n", name, name)
+			message := fmt.Sprintf("Created box %q. Next: box setup %s", name, name)
+			if presenter != nil {
+				return presenter.ShowSuccess(command.OutOrStdout(), message)
+			}
+			_, err = fmt.Fprintln(command.OutOrStdout(), message)
 			return err
 		},
 	}
