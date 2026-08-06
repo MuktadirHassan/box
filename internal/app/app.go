@@ -5,6 +5,7 @@ import (
 	"github.com/MuktadirHassan/box/internal/backend/podman"
 	"github.com/MuktadirHassan/box/internal/cli"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/terminal"
 )
 
 func Execute() error {
@@ -19,5 +20,5 @@ func Execute() error {
 		return err
 	}
 
-	return cli.NewRootCommand(definitions, runtimes).Execute()
+	return cli.NewRootCommand(definitions, runtimes, terminal.NewPresenter()).Execute()
 }

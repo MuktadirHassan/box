@@ -2,10 +2,15 @@ package cli
 
 import (
 	"github.com/MuktadirHassan/box/internal/backend"
+	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
 
-func NewRootCommand(definitions definitionStore, runtimes *backend.Registry) *cobra.Command {
+func NewRootCommand(definitions definitionStore, runtimes *backend.Registry, presenters ...ui.Presenter) *cobra.Command {
+	var presenter ui.Presenter
+	if len(presenters) > 0 {
+		presenter = presenters[0]
+	}
 	command := &cobra.Command{
 		Use:   "box",
 		Short: "Manage development boxes",
@@ -13,9 +18,9 @@ func NewRootCommand(definitions definitionStore, runtimes *backend.Registry) *co
 
 	command.AddCommand(
 		newCreateCommand(definitions),
-		newSetupCommand(definitions, runtimes),
+		newSetupCommand(definitions, runtimes, presenter),
 		newListCommand(definitions),
-		newInspectCommand(definitions, runtimes),
+		newInspectCommand(definitions, runtimes, presenter),
 		newEnterCommand(definitions, runtimes),
 		newExecCommand(definitions, runtimes),
 		newStopCommand(definitions, runtimes),
