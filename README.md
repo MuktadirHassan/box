@@ -2,11 +2,7 @@
 
 A Linux CLI for creating persistent, rootless Podman development environments.
 
-> **Status: alpha.** Box is pre-1.0 software. It is usable for experimentation, but interfaces, configuration, and behavior may change without migration support. Do not rely on it for critical workloads yet.
-
-## Versioning
-
-Box follows [Semantic Versioning](https://semver.org/). The first release is `v0.1.0`. Until `v1.0.0`, minor versions may include breaking changes; patch versions contain compatible fixes. See [Releases](https://github.com/MuktadirHassan/box/releases) for changes and upgrade notes.
+> **Alpha:** Box is pre-1.0 software. Interfaces, configuration, and behavior may change without migration support. Do not rely on it for critical workloads.
 
 ## Requirements
 
@@ -21,7 +17,9 @@ Install the latest release for your architecture:
 curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh
 ```
 
-The script downloads the release archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`. Use a specific version or a different destination when needed:
+The script downloads the archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`.
+
+To install a specific version or use another destination:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh -s -- \
@@ -31,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh 
 
 ### Manual installation
 
-The installer performs the following steps. Download the archive for your architecture from [Releases](https://github.com/MuktadirHassan/box/releases), verify it, and install it on your `PATH`:
+The installer performs these steps. Use them when you want to inspect or control each step yourself:
 
 ```bash
 VERSION=0.1.0 # replace with the release version, without "v"
@@ -46,50 +44,7 @@ install -Dm755 box "$HOME/.local/bin/box"
 box --version
 ```
 
-## Upgrade
-
-Run the installer again to replace the binary. Box definitions remain in `~/.local/share/box/boxes/`. Because Box is alpha software, back up `~/.local/share/box/` before upgrading across minor versions.
-
-## Uninstall
-
-Remove only the Box binary:
-
-```bash
-rm -f "${BOX_INSTALL_DIR:-$HOME/.local/bin}/box"
-```
-
-This keeps your environments and their data. To permanently remove one environment, including its runtime and managed persistent data:
-
-```bash
-box delete <name> --purge
-```
-
-### Remove all Box data
-
-> **Warning:** This permanently deletes every Box environment, its managed persistent data, and saved definitions.
-
-Purge every environment before removing the remaining local data:
-
-```bash
-set -e
-for definition in "$HOME"/.local/share/box/boxes/*; do
-  [ -d "$definition" ] || continue
-  box delete "$(basename "$definition")" --purge
-done
-rm -rf "$HOME/.local/share/box"
-```
-
-## Build from source
-
-Requires Go 1.26.5 or later.
-
-```bash
-git clone https://github.com/MuktadirHassan/box.git
-cd box
-go build -o box .
-```
-
-## Usage
+## Quick start
 
 Create, configure, and enter an environment:
 
@@ -120,10 +75,56 @@ box stop work
 box delete work --purge
 ```
 
-`--purge` is required for deletion. Box keeps definitions in `~/.local/share/box/boxes/`.
+## Upgrade
 
-## Documentation
+Run the installer again to replace the binary. Definitions remain in `~/.local/share/box/boxes/`. Back up `~/.local/share/box/` before upgrading across minor alpha versions.
 
+## Uninstall
+
+Remove only the Box binary:
+
+```bash
+rm -f "${BOX_INSTALL_DIR:-$HOME/.local/bin}/box"
+```
+
+This keeps environments and their data.
+
+### Remove an environment
+
+Permanently remove one environment, including its runtime and managed persistent data:
+
+```bash
+box delete <name> --purge
+```
+
+### Remove all Box data
+
+> **Warning:** This permanently deletes every Box environment, its managed persistent data, and saved definitions.
+
+```bash
+set -e
+for definition in "$HOME"/.local/share/box/boxes/*; do
+  [ -d "$definition" ] || continue
+  box delete "$(basename "$definition")" --purge
+done
+rm -rf "$HOME/.local/share/box"
+```
+
+## Build from source
+
+Requires Go 1.26.5 or later.
+
+```bash
+git clone https://github.com/MuktadirHassan/box.git
+cd box
+go build -o box .
+```
+
+## Versioning and documentation
+
+Box follows [Semantic Versioning](https://semver.org/). `v0.1.0` is the first release; before `v1.0.0`, minor versions may contain breaking changes and patch versions contain compatible fixes.
+
+- [Releases](https://github.com/MuktadirHassan/box/releases)
 - [Architecture](architecture.md)
 - [Environment templates](internal/templates/README.md)
 - `box --help`
