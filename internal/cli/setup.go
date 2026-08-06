@@ -23,6 +23,7 @@ type setupOptions struct {
 	memory    string
 	pids      int
 	network   string
+	template  string
 	clipboard bool
 	sshAgent  bool
 	yes       bool
@@ -154,6 +155,7 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 	flags.StringVar(&options.memory, "memory", "", "memory limit")
 	flags.IntVar(&options.pids, "pids-limit", 0, "process limit")
 	flags.StringVar(&options.network, "network", "", "network policy: outbound or none")
+	flags.StringVar(&options.template, "template", "", "environment template: terminal-tools")
 	flags.BoolVar(&options.clipboard, "clipboard", false, "enable host clipboard integration")
 	flags.BoolVar(&options.sshAgent, "ssh-agent", false, "enable SSH agent forwarding")
 	flags.BoolVar(&options.yes, "yes", false, "save the displayed configuration")
@@ -200,6 +202,9 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	if flags.Changed("network") {
 		configuration.Network = options.network
 	}
+	if flags.Changed("template") {
+		configuration.Template = options.template
+	}
 	if flags.Changed("clipboard") {
 		configuration.Integrations.Clipboard = options.clipboard
 	}
@@ -219,12 +224,15 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	if configuration.Network != "outbound" && configuration.Network != "none" {
 		return box.Configuration{}, fmt.Errorf("network policy %q is not supported; use outbound or none", configuration.Network)
 	}
+	if err := box.ValidateTemplate(configuration.Template); err != nil {
+		return box.Configuration{}, err
+	}
 
 	return configuration, nil
 }
 
 func setupConfigurationFlagsChanged(command *cobra.Command) bool {
-	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "clipboard", "ssh-agent"} {
+	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "template", "clipboard", "ssh-agent"} {
 		if command.Flags().Changed(name) {
 			return true
 		}

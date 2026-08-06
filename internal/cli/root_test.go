@@ -115,7 +115,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := NewRootCommand(definitions, registry)
-	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--clipboard", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--template", "terminal-tools", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -141,6 +141,9 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	}
 	if !definition.Configuration.Integrations.Clipboard {
 		t.Error("Clipboard = false, want true")
+	}
+	if definition.Configuration.Template != box.TerminalToolsTemplate {
+		t.Errorf("Template = %q, want %q", definition.Configuration.Template, box.TerminalToolsTemplate)
 	}
 	if mounts := definition.Configuration.Mounts; len(mounts) != 1 || mounts[0] != (box.Mount{Source: "/work", Destination: "/workspace"}) {
 		t.Errorf("Mounts = %#v, want /work:/workspace", mounts)

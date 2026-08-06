@@ -35,6 +35,7 @@ type Configuration struct {
 	Caches       Persistence  `toml:"caches"`
 	Limits       Limits       `toml:"limits"`
 	Network      string       `toml:"network"`
+	Template     string       `toml:"template,omitempty"`
 	Integrations Integrations `toml:"integrations"`
 }
 
