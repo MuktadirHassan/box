@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +24,7 @@ type setupOptions struct {
 	yes       bool
 }
 
-func newSetupCommand(definitions definitionStore) *cobra.Command {
+func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *cobra.Command {
 	options := setupOptions{}
 	command := &cobra.Command{
 		Use:   "setup <name>",
@@ -56,11 +58,32 @@ func newSetupCommand(definitions definitionStore) *cobra.Command {
 			if !options.yes {
 				return ErrSetupConfirmation
 			}
-			if err := definitions.Update(definition); err != nil {
+			if runtimes == nil {
+				return fmt.Errorf("runtime setup is unavailable")
+			}
+			runtime, err := runtimes.Get(definition.Backend)
+			if err != nil {
 				return err
 			}
-
-			_, err = fmt.Fprintf(command.OutOrStdout(), "Configured box %q. Runtime creation is not implemented yet.\n", definition.Name)
+			if err := runtime.Validate(context.Background()); err != nil {
+				return err
+			}
+			configured := definition
+			configured.State = box.CreatedState
+			if err := definitions.Update(configured); err != nil {
+				return err
+			}
+			metadata, err := runtime.Create(context.Background(), definition)
+			if err != nil {
+				return err
+			}
+			if err := definitions.SaveMetadata(definition.Name, box.Metadata{Runtime: metadata}); err != nil {
+				return fmt.Errorf("save runtime metadata: %w", err)
+			}
+			if err := definitions.Update(definition); err != nil {
+				return fmt.Errorf("mark box ready: %w", err)
+			}
+			_, err = fmt.Fprintf(command.OutOrStdout(), "Configured and created box %q.\n", definition.Name)
 			return err
 		},
 	}
