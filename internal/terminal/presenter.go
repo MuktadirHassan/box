@@ -70,15 +70,77 @@ func (Presenter) ShowDefinition(writer io.Writer, definition box.Definition) err
 		}
 	}
 	for _, field := range fields {
-		if _, err := fmt.Fprintf(writer, "  %s  %s\n", render(labelStyle, field[0]), field[1]); err != nil {
+		if err := writeInspectField(writer, field[0], field[1]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func (Presenter) ShowRuntime(writer io.Writer, state box.RuntimeState, id string) error {
+	if err := writeInspectField(writer, "Runtime", string(state)); err != nil {
+		return err
+	}
+	if id == "" {
+		return nil
+	}
+	return writeInspectField(writer, "Runtime ID", id)
+}
+
+func writeInspectField(writer io.Writer, label, value string) error {
+	_, err := fmt.Fprintf(writer, "  %s  %s\n", render(labelStyle, pad(label, len("Persistent caches"))), value)
+	return err
+}
+
+func (Presenter) ShowList(writer io.Writer, definitions []box.Definition) error {
+	if err := writeTitle(writer, "Boxes"); err != nil {
+		return err
+	}
+	if len(definitions) == 0 {
+		_, err := fmt.Fprintln(writer, "  No boxes yet. Create one with: box create <name>")
+		return err
+	}
+
+	type row struct{ name, state, image string }
+	rows := make([]row, 0, len(definitions))
+	nameWidth, stateWidth := len("NAME"), len("STATE")
+	for _, definition := range definitions {
+		image := definition.Configuration.Image
+		if image == "" {
+			image = "-"
+		}
+		item := row{definition.Name, string(definition.State), image}
+		rows = append(rows, item)
+		nameWidth = max(nameWidth, len(item.name))
+		stateWidth = max(stateWidth, len(item.state))
+	}
+	if _, err := fmt.Fprintf(writer, "  %s  %s  %s\n", render(labelStyle, pad("NAME", nameWidth)), render(labelStyle, pad("STATE", stateWidth)), render(labelStyle, "IMAGE")); err != nil {
+		return err
+	}
+	for _, item := range rows {
+		if _, err := fmt.Fprintf(writer, "  %s  %s  %s\n", pad(item.name, nameWidth), pad(item.state, stateWidth), item.image); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func pad(value string, width int) string {
+	return fmt.Sprintf("%-*s", width, value)
+}
+
 func (Presenter) ShowWarning(writer io.Writer, message string) error {
 	_, err := fmt.Fprintln(writer, render(warningStyle, message))
+	return err
+}
+
+func (Presenter) ShowSuccess(writer io.Writer, message string) error {
+	_, err := fmt.Fprintln(writer, render(lipgloss.NewStyle().Foreground(lipgloss.Color("10")), message))
+	return err
+}
+
+func writeTitle(writer io.Writer, value string) error {
+	_, err := fmt.Fprintln(writer, render(titleStyle, value))
 	return err
 }
 func nonEmpty(name string) func(string) error {
