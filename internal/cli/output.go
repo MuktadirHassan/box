@@ -14,7 +14,6 @@ func writeDefinition(writer io.Writer, definition box.Definition) error {
 	if definition.State != box.ReadyState {
 		return nil
 	}
-
 	configuration := definition.Configuration
 	if _, err := fmt.Fprintf(writer, "image: %s\nuser: %s\nnetwork: %s\npersistent home: %t\npersistent caches: %t\n", configuration.Image, configuration.User, configuration.Network, configuration.Home.Enabled, configuration.Caches.Enabled); err != nil {
 		return err
@@ -42,6 +41,5 @@ func writeDefinition(writer io.Writer, definition box.Definition) error {
 			return err
 		}
 	}
-
 	return nil
 }

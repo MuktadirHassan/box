@@ -10,6 +10,7 @@ import (
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +28,7 @@ type setupOptions struct {
 	yes       bool
 }
 
-func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *cobra.Command {
+func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, presenter ui.Presenter) *cobra.Command {
 	options := setupOptions{}
 	command := &cobra.Command{
 		Use:   "setup <name>",
@@ -44,6 +45,13 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 			if err != nil {
 				return err
 			}
+			definition.Configuration = configuration
+			if previous.State == box.CreatedState && !options.yes && !setupConfigurationFlagsChanged(command) && presenter != nil {
+				definition, err = presenter.ConfigureInitial(definition)
+				if err != nil {
+					return err
+				}
+			}
 			if definition.Backend == "" {
 				definition.Backend = box.PodmanBackend
 			}
@@ -53,7 +61,6 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 			if err := box.ValidateBackend(definition.Backend); err != nil {
 				return err
 			}
-			definition.Configuration = configuration
 			definition.State = box.ReadyState
 
 			metadata, err := definitions.LoadMetadata(definition.Name)
@@ -63,16 +70,30 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry) *c
 			}
 			recreate := hasRuntime && requiresRuntimeRecreation(previous, definition)
 
-			if err := writeDefinition(command.OutOrStdout(), definition); err != nil {
+			if presenter != nil {
+				if err := presenter.ShowDefinition(command.OutOrStdout(), definition); err != nil {
+					return err
+				}
+			} else if err := writeDefinition(command.OutOrStdout(), definition); err != nil {
 				return err
 			}
 			if recreate {
-				if _, err := fmt.Fprintln(command.OutOrStdout(), "This change will recreate the runtime. Managed home and cache data will be preserved."); err != nil {
+				message := "This change will recreate the runtime. Managed home and cache data will be preserved."
+				if presenter != nil {
+					if err := presenter.ShowWarning(command.OutOrStdout(), message); err != nil {
+						return err
+					}
+				} else if _, err := fmt.Fprintln(command.OutOrStdout(), message); err != nil {
 					return err
 				}
 			}
 			if !options.yes {
-				return ErrSetupConfirmation
+				if presenter == nil {
+					return ErrSetupConfirmation
+				}
+				if err := presenter.ConfirmSetup(); err != nil {
+					return ErrSetupConfirmation
+				}
 			}
 			if runtimes == nil {
 				return fmt.Errorf("runtime setup is unavailable")
@@ -200,6 +221,15 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	}
 
 	return configuration, nil
+}
+
+func setupConfigurationFlagsChanged(command *cobra.Command) bool {
+	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "clipboard", "ssh-agent"} {
+		if command.Flags().Changed(name) {
+			return true
+		}
+	}
+	return false
 }
 
 func requiresRuntimeRecreation(previous, next box.Definition) bool {

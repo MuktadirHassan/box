@@ -7,20 +7,23 @@ import (
 
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
 
-func newInspectCommand(definitions definitionStore, runtimes *backend.Registry) *cobra.Command {
+func newInspectCommand(definitions definitionStore, runtimes *backend.Registry, presenter ui.Presenter) *cobra.Command {
 	return &cobra.Command{
-		Use:   "inspect <name>",
-		Short: "Inspect a box",
-		Args:  cobra.ExactArgs(1),
+		Use: "inspect <name>", Short: "Inspect a box", Args: cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, arguments []string) error {
 			definition, err := definitions.Load(arguments[0])
 			if err != nil {
 				return err
 			}
-			if err := writeDefinition(command.OutOrStdout(), definition); err != nil {
+			if presenter != nil {
+				if err := presenter.ShowDefinition(command.OutOrStdout(), definition); err != nil {
+					return err
+				}
+			} else if err := writeDefinition(command.OutOrStdout(), definition); err != nil {
 				return err
 			}
 			metadata, err := definitions.LoadMetadata(definition.Name)
