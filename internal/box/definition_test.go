@@ -2,6 +2,22 @@ package box
 
 import "testing"
 
+func TestTemplatePackages(t *testing.T) {
+	packages := TemplatePackages(TerminalToolsTemplate)
+	want := []string{"fish", "jq", "neovim", "tmux", "ripgrep", "starship", "wl-clipboard"}
+	if len(packages) != len(want) {
+		t.Fatalf("TemplatePackages() = %v, want %v", packages, want)
+	}
+	for index, value := range want {
+		if packages[index] != value {
+			t.Errorf("TemplatePackages()[%d] = %q, want %q", index, packages[index], value)
+		}
+	}
+	if err := ValidateTemplate("unknown"); err == nil {
+		t.Error("ValidateTemplate() error = nil for an unknown template")
+	}
+}
+
 func TestNewDefinitionUsesInitialValues(t *testing.T) {
 	definition := NewDefinition("demo")
 
