@@ -32,7 +32,7 @@ func (Presenter) ConfigureInitial(definition box.Definition) (box.Definition, er
 		huh.NewInput().Title("Base image").Description("The image used to create the development environment.").Value(&configuration.Image).Validate(nonEmpty("base image")),
 		huh.NewInput().Title("Linux user").Description("The user account created inside the box.").Value(&configuration.User).Validate(box.ValidateUser),
 		huh.NewSelect[string]().Title("Network policy").Options(huh.NewOption("Outbound network access", "outbound"), huh.NewOption("No network access", "none")).Value(&configuration.Network),
-		huh.NewSelect[string]().Title("Environment template").Description("Optional tools installed when the box is created; requires Ubuntu or Debian.").Options(huh.NewOption("No template", ""), huh.NewOption("Terminal tools (fish, tmux, neovim, and more)", box.TerminalToolsTemplate)).Value(&configuration.Template),
+		huh.NewSelect[string]().Title("Environment template").Description("Optional tools installed when the box is created; requires Ubuntu, Debian, or Arch Linux.").Options(huh.NewOption("No template", ""), huh.NewOption("Terminal tools (fish, tmux, neovim, and more)", box.TerminalToolsTemplate)).Value(&configuration.Template),
 		huh.NewConfirm().Title("Persist the home directory?").Value(&configuration.Home.Enabled),
 		huh.NewConfirm().Title("Persist development caches?").Value(&configuration.Caches.Enabled),
 		huh.NewConfirm().Title("Enable clipboard integration?").Value(&configuration.Integrations.Clipboard),
