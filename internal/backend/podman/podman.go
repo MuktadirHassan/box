@@ -4,20 +4,34 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
+	"github.com/MuktadirHassan/box/internal/templates"
+	assets "github.com/MuktadirHassan/box/templates"
 )
 
 type Backend struct {
-	runner Runner
-	env    func(string) string
+	runner  Runner
+	env     func(string) string
+	catalog templates.Catalog
+}
+
+func isNilCatalog(catalog templates.Catalog) bool {
+	v := reflect.ValueOf(catalog)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
 }
 
 type Options struct {
-	Runner Runner
-	Env    func(string) string
+	Runner  Runner
+	Env     func(string) string
+	Catalog templates.Catalog
 }
 
 func New(options Options) *Backend {
@@ -30,7 +44,11 @@ func New(options Options) *Backend {
 		env = os.Getenv
 	}
 
-	return &Backend{runner: runner, env: env}
+	catalog := options.Catalog
+	if catalog == nil || isNilCatalog(catalog) {
+		catalog = templates.NewEmbeddedCatalog(assets.FS())
+	}
+	return &Backend{runner: runner, env: env, catalog: catalog}
 }
 
 func (b *Backend) Name() box.Backend { return box.PodmanBackend }
@@ -53,7 +71,8 @@ func (b *Backend) Create(ctx context.Context, definition box.Definition) (box.Ru
 	if err := box.ValidateName(definition.Name); err != nil {
 		return box.RuntimeMetadata{}, err
 	}
-	if err := validateConfiguration(definition.Configuration); err != nil {
+	definition.Configuration = box.NormalizeConfiguration(definition.Configuration)
+	if err := b.ValidateConfiguration(definition.Configuration); err != nil {
 		return box.RuntimeMetadata{}, err
 	}
 	runtimeDefinition, err := b.buildTemplate(ctx, definition)
@@ -127,14 +146,18 @@ func (b *Backend) Delete(ctx context.Context, definition box.Definition, metadat
 	return nil
 }
 
-func (b *Backend) Enter(ctx context.Context, metadata box.RuntimeMetadata) error {
+func (b *Backend) Enter(ctx context.Context, definition box.Definition, metadata box.RuntimeMetadata) error {
 	status, err := b.Inspect(ctx, metadata)
+	if err != nil {
+		return err
+	}
+	shell, err := shellPath(definition.Configuration.Shell)
 	if err != nil {
 		return err
 	}
 	switch status.State {
 	case box.RuntimeRunning:
-		return b.run(ctx, metadata, "exec", "--interactive", "--tty", metadata.ID, "/bin/sh")
+		return b.run(ctx, metadata, "exec", "--interactive", "--tty", metadata.ID, shell)
 	case box.RuntimeCreated, box.RuntimeStopped:
 		return b.run(ctx, metadata, "start", "--attach", "--interactive", metadata.ID)
 	default:

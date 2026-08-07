@@ -5,11 +5,11 @@ repo="MuktadirHassan/box"
 version="latest"
 arch=""
 install_dir="${BOX_INSTALL_DIR:-$HOME/.local/bin}"
-install_completions=true
+completion_shell="all"
 
 usage() {
 	cat <<'EOF'
-Usage: install.sh [--version VERSION] [--arch ARCH] [--install-dir DIR]
+Usage: install.sh [--version VERSION] [--arch ARCH] [--install-dir DIR] [--shell SHELL]
 
 Install the latest Box release for Linux amd64 or arm64.
 
@@ -17,7 +17,8 @@ Options:
   --version VERSION    Release version, with or without a leading v
   --arch ARCH          amd64 or arm64; defaults to the current machine
   --install-dir DIR    Destination directory (default: ~/.local/bin)
-  --no-completions     Do not install Fish and Bash completions
+  --shell SHELL        Install completions for bash, fish, zsh, all, or none (default: all)
+  --no-completions     Do not install shell completions
   -h, --help           Show this help message
 EOF
 }
@@ -48,8 +49,13 @@ while [ "$#" -gt 0 ]; do
 			install_dir=$2
 			shift 2
 			;;
+		--shell)
+			[ "$#" -ge 2 ] || die "--shell requires a value"
+			completion_shell=$2
+			shift 2
+			;;
 		--no-completions)
-			install_completions=false
+			completion_shell="none"
 			shift
 			;;
 		-h|--help)
@@ -80,6 +86,11 @@ case "$arch" in
 	*) die "unsupported architecture: $arch (supported: amd64, arm64)" ;;
 esac
 
+case "$completion_shell" in
+	bash|fish|zsh|all|none) ;;
+	*) die "unsupported shell: $completion_shell (supported: bash, fish, zsh, all, none)" ;;
+esac
+
 if [ "$version" = "latest" ]; then
 	version=$(curl --fail --location --silent --show-error "https://api.github.com/repos/$repo/releases/latest" |
 		sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' |
@@ -96,7 +107,8 @@ archive="box_${release_version}_linux_${arch}.tar.gz"
 base_url="https://github.com/$repo/releases/download/$tag"
 
 tmp_dir=$(mktemp -d)
-trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
+completion_tmp=""
+trap 'rm -rf "$tmp_dir"; [ -z "$completion_tmp" ] || rm -f "$completion_tmp"' EXIT HUP INT TERM
 
 printf 'Installing Box %s for linux/%s...\n' "$tag" "$arch"
 curl --fail --location --retry 3 --silent --show-error --output "$tmp_dir/$archive" "$base_url/$archive"
@@ -110,16 +122,37 @@ tar -xzf "$tmp_dir/$archive" -C "$tmp_dir"
 [ -f "$tmp_dir/box" ] || die "release archive does not contain box"
 install -Dm755 "$tmp_dir/box" "$install_dir/box"
 
-if [ "$install_completions" = true ]; then
-	fish_completions_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions"
-	bash_completions_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
-	zsh_completions_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
-	mkdir -p "$fish_completions_dir" "$bash_completions_dir" "$zsh_completions_dir"
-	"$install_dir/box" completion fish > "$fish_completions_dir/box.fish"
-	"$install_dir/box" completion bash > "$bash_completions_dir/box"
-	"$install_dir/box" completion zsh > "$zsh_completions_dir/_box"
-	printf 'Installed Fish, Bash, and Zsh completions.\n'
-fi
+install_completion() {
+	shell=$1
+	case "$shell" in
+		fish) destination="${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions/box.fish" ;;
+		bash) destination="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/box" ;;
+		zsh) destination="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions/_box" ;;
+	esac
+	completion_dir=$(dirname "$destination")
+	mkdir -p "$completion_dir" || return 1
+	completion_tmp=$(mktemp "$completion_dir/.box-completion.XXXXXX") || return 1
+	if "$install_dir/box" completion "$shell" > "$completion_tmp" && mv -f "$completion_tmp" "$destination"; then
+		completion_tmp=""
+		printf 'Installed %s completions to %s\n' "$shell" "$destination"
+		if [ "$shell" = "zsh" ]; then
+			printf 'Add %s to fpath before running compinit; see the README for details.\n' "$completion_dir"
+		fi
+		return 0
+	fi
+	rm -f "$completion_tmp"
+	completion_tmp=""
+	return 1
+}
+
+case "$completion_shell" in
+	bash|fish|zsh) install_completion "$completion_shell" || die "could not install $completion_shell completions" ;;
+	all)
+		install_completion bash || die "could not install bash completions"
+		install_completion fish || die "could not install fish completions"
+		install_completion zsh || die "could not install zsh completions"
+		;;
+esac
 
 printf 'Installed Box %s to %s/box\n' "$tag" "$install_dir"
 case ":$PATH:" in

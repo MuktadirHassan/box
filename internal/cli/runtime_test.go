@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -12,16 +13,20 @@ import (
 )
 
 type recordingBackend struct {
-	created        box.Definition
-	createErr      error
-	deleted        box.Definition
-	deletedRuntime box.RuntimeMetadata
-	deleteOptions  backend.DeleteOptions
-	deleteErr      error
+	created            box.Definition
+	createErr          error
+	deleted            box.Definition
+	deletedRuntime     box.RuntimeMetadata
+	deleteOptions      backend.DeleteOptions
+	deleteErr          error
+	configurationError error
 }
 
 func (b *recordingBackend) Name() box.Backend            { return box.PodmanBackend }
 func (*recordingBackend) Validate(context.Context) error { return nil }
+func (b *recordingBackend) ValidateConfiguration(box.Configuration) error {
+	return b.configurationError
+}
 func (b *recordingBackend) Create(_ context.Context, definition box.Definition) (box.RuntimeMetadata, error) {
 	b.created = definition
 	if b.createErr != nil {
@@ -40,8 +45,25 @@ func (b *recordingBackend) Delete(_ context.Context, definition box.Definition, 
 	b.deleteOptions = options
 	return b.deleteErr
 }
-func (*recordingBackend) Enter(context.Context, box.RuntimeMetadata) error          { return nil }
+func (*recordingBackend) Enter(context.Context, box.Definition, box.RuntimeMetadata) error {
+	return nil
+}
 func (*recordingBackend) Exec(context.Context, box.RuntimeMetadata, []string) error { return nil }
+
+type setupPresenter struct {
+	configure func(box.Definition) box.Definition
+	confirmed bool
+}
+
+func (p *setupPresenter) ConfigureInitial(definition box.Definition) (box.Definition, error) {
+	return p.configure(definition), nil
+}
+func (p *setupPresenter) ConfirmSetup() error                                 { p.confirmed = true; return nil }
+func (*setupPresenter) ShowDefinition(io.Writer, box.Definition) error        { return nil }
+func (*setupPresenter) ShowRuntime(io.Writer, box.RuntimeState, string) error { return nil }
+func (*setupPresenter) ShowList(io.Writer, []box.Definition) error            { return nil }
+func (*setupPresenter) ShowWarning(io.Writer, string) error                   { return nil }
+func (*setupPresenter) ShowSuccess(io.Writer, string) error                   { return nil }
 
 func TestSetupCreatesAndPersistsRuntimeMetadata(t *testing.T) {
 	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
@@ -106,6 +128,82 @@ func TestSetupRecreatesChangedRuntimeAndPreservesPersistentData(t *testing.T) {
 	}
 	if updated.Configuration.Image != "archlinux:latest" || updated.State != box.ReadyState {
 		t.Errorf("updated definition = %#v", updated)
+	}
+}
+
+func TestSetupValidatesInteractiveConfigurationBeforeConfirmation(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatal(err)
+	}
+	configurationErr := errors.New("a non-default shell requires an environment template")
+	runtime := &recordingBackend{configurationError: configurationErr}
+	registry, err := backend.NewRegistry(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	presenter := &setupPresenter{configure: func(definition box.Definition) box.Definition {
+		definition.Configuration.Shell = "fish"
+		return definition
+	}}
+	command := NewRootCommand(definitions, registry, presenter)
+	command.SetArgs([]string{"setup", "demo"})
+	if err := command.Execute(); !errors.Is(err, configurationErr) {
+		t.Fatalf("setup error = %v, want configuration validation error", err)
+	}
+	if presenter.confirmed {
+		t.Error("setup asked for confirmation after configuration validation failed")
+	}
+	if runtime.created.Name != "" {
+		t.Errorf("runtime was created for invalid interactive configuration: %#v", runtime.created)
+	}
+}
+
+func TestSetupRejectsUnsupportedTemplateImageBeforeRuntimeChanges(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatal(err)
+	}
+	runtime := &recordingBackend{configurationError: errors.New("template does not support image family")}
+	registry, err := backend.NewRegistry(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := NewRootCommand(definitions, registry)
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--template", "terminal-tools", "--yes"})
+	if err := command.Execute(); err == nil {
+		t.Fatal("setup error = nil for an unsupported template image")
+	}
+	if runtime.created.Name != "" {
+		t.Errorf("runtime was created for unsupported template image: %#v", runtime.created)
+	}
+}
+
+func TestSetupRefreshTemplateRecreatesRuntime(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	definition := box.NewDefinition("demo")
+	definition.State = box.ReadyState
+	definition.Configuration = box.DefaultConfiguration()
+	definition.Configuration.User = "dev"
+	definition.Configuration.Template = "terminal-tools"
+	if err := definitions.Create(definition); err != nil {
+		t.Fatal(err)
+	}
+	if err := definitions.SaveMetadata("demo", box.Metadata{Runtime: box.RuntimeMetadata{Backend: box.PodmanBackend, ID: "old-runtime", State: box.RuntimeRunning}}); err != nil {
+		t.Fatal(err)
+	}
+	runtime := &recordingBackend{}
+	registry, err := backend.NewRegistry(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := NewRootCommand(definitions, registry)
+	command.SetArgs([]string{"setup", "demo", "--refresh-template", "--yes"})
+	if err := command.Execute(); err != nil {
+		t.Fatalf("setup refresh error = %v", err)
+	}
+	if runtime.deleted.Name != "demo" || runtime.created.Configuration.TemplateRevision != 1 {
+		t.Errorf("refresh did not recreate with a new revision: deleted=%#v created=%#v", runtime.deleted, runtime.created)
 	}
 }
 

@@ -30,7 +30,11 @@ func newEnterCommand(definitions definitionStore, runtimes *backend.Registry) *c
 		if err != nil {
 			return err
 		}
-		return runtime.Enter(context.Background(), metadata.Runtime)
+		definition, err := definitions.Load(arguments[0])
+		if err != nil {
+			return err
+		}
+		return runtime.Enter(context.Background(), definition, metadata.Runtime)
 	}}
 }
 

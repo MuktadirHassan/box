@@ -7,7 +7,43 @@ import (
 	"strings"
 
 	"github.com/MuktadirHassan/box/internal/box"
+	"github.com/MuktadirHassan/box/internal/templates"
 )
+
+func (b *Backend) ValidateConfiguration(configuration box.Configuration) error {
+	configuration = box.NormalizeConfiguration(configuration)
+	if err := validateConfiguration(configuration); err != nil {
+		return err
+	}
+	if configuration.TemplateRevision < 0 {
+		return fmt.Errorf("template revision cannot be negative")
+	}
+	if err := box.ValidateTemplate(configuration.Template); err != nil {
+		return err
+	}
+	if configuration.Template != "" {
+		resolved, err := b.catalog.Resolve(configuration.Template)
+		if err != nil {
+			return err
+		}
+		if err := resolved.Validate(templates.Request{Image: configuration.Image, Shell: configuration.Shell, Prompt: configuration.Prompt}); err != nil {
+			return err
+		}
+	}
+	if configuration.Template == "" && (configuration.Shell != "sh" || configuration.Prompt != "none") {
+		return fmt.Errorf("a non-default shell or prompt requires an environment template")
+	}
+	if configuration.Prompt == "starship" && configuration.Shell == "sh" {
+		return fmt.Errorf("prompt %q requires bash, fish, or zsh", configuration.Prompt)
+	}
+	if _, err := shellPath(configuration.Shell); err != nil {
+		return err
+	}
+	if configuration.Prompt != "none" && configuration.Prompt != "starship" {
+		return fmt.Errorf("unsupported prompt %q", configuration.Prompt)
+	}
+	return nil
+}
 
 func validateConfiguration(configuration box.Configuration) error {
 	if err := box.ValidateUser(configuration.User); err != nil {
@@ -62,7 +98,20 @@ func secureSocket(path string) (string, error) {
 }
 
 func validImage(image string) bool {
-	return image != "" && strings.TrimSpace(image) == image && !strings.ContainsAny(image, " \t\r\n") && !strings.HasPrefix(image, "-")
+	if image == "" || strings.TrimSpace(image) != image || strings.ContainsAny(image, " \t\r\n") || strings.HasPrefix(image, "-") {
+		return false
+	}
+	if strings.Count(image, "@") > 1 {
+		return false
+	}
+	_, digest, hasDigest := strings.Cut(image, "@")
+	if hasDigest {
+		algorithm, value, valid := strings.Cut(digest, ":")
+		if !valid || algorithm == "" || value == "" || strings.Trim(value, "0123456789abcdefABCDEF") != "" || len(value) != 64 {
+			return false
+		}
+	}
+	return true
 }
 
 func validLimit(limit string) bool {
@@ -87,8 +136,23 @@ func containerHome(user string) string { return "/home/" + user }
 
 func containerUser(uid, gid int) string { return fmt.Sprintf("%d:%d", uid, gid) }
 
-func passwdEntry(user, home string, uid, gid int) string {
-	return fmt.Sprintf("%s:x:%d:%d::%s:/bin/sh", user, uid, gid, home)
+func passwdEntry(user, home, shell string, uid, gid int) string {
+	return fmt.Sprintf("%s:x:%d:%d::%s:%s", user, uid, gid, home, shell)
+}
+
+func shellPath(shell string) (string, error) {
+	switch shell {
+	case "", "sh":
+		return "/bin/sh", nil
+	case "bash":
+		return "/bin/bash", nil
+	case "fish":
+		return "/usr/bin/fish", nil
+	case "zsh":
+		return "/usr/bin/zsh", nil
+	default:
+		return "", fmt.Errorf("unsupported shell %q", shell)
+	}
 }
 
 func networkMode(policy string) string {

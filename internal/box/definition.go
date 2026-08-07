@@ -28,15 +28,18 @@ type Definition struct {
 }
 
 type Configuration struct {
-	Image        string       `toml:"image"`
-	User         string       `toml:"user"`
-	Mounts       []Mount      `toml:"mounts"`
-	Home         Persistence  `toml:"home"`
-	Caches       Persistence  `toml:"caches"`
-	Limits       Limits       `toml:"limits"`
-	Network      string       `toml:"network"`
-	Template     string       `toml:"template,omitempty"`
-	Integrations Integrations `toml:"integrations"`
+	Image            string       `toml:"image"`
+	User             string       `toml:"user"`
+	Mounts           []Mount      `toml:"mounts"`
+	Home             Persistence  `toml:"home"`
+	Caches           Persistence  `toml:"caches"`
+	Limits           Limits       `toml:"limits"`
+	Network          string       `toml:"network"`
+	Template         string       `toml:"template,omitempty"`
+	TemplateRevision int          `toml:"template_revision,omitempty"`
+	Shell            string       `toml:"shell"`
+	Prompt           string       `toml:"prompt"`
+	Integrations     Integrations `toml:"integrations"`
 }
 
 type Mount struct {
@@ -74,7 +77,20 @@ func DefaultConfiguration() Configuration {
 		Home:    Persistence{Enabled: true},
 		Caches:  Persistence{Enabled: true},
 		Network: "outbound",
+		Shell:   "sh",
+		Prompt:  "none",
 	}
+}
+
+// NormalizeConfiguration fills values whose empty form has a portable default.
+func NormalizeConfiguration(configuration Configuration) Configuration {
+	if configuration.Shell == "" {
+		configuration.Shell = "sh"
+	}
+	if configuration.Prompt == "" {
+		configuration.Prompt = "none"
+	}
+	return configuration
 }
 
 func ValidateName(name string) error {

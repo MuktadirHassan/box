@@ -4,6 +4,20 @@ A Linux CLI for creating persistent, rootless Podman development environments.
 
 > **Alpha:** Box is pre-1.0 software. Interfaces, configuration, and behavior may change without migration support. Do not rely on it for critical workloads.
 
+## Environment templates
+
+Use the canonical template ID when configuring an environment:
+
+```bash
+box setup work --template ubuntu-24.04-terminal-tools --image ubuntu:24.04 --yes
+```
+
+Template IDs are backed by catalog manifests that declare image release,
+supported shells, and prompts. The legacy `terminal-tools` value remains
+accepted and is converted to the canonical ID only after a successful explicit
+setup update. Ubuntu 24.04 templates require `ubuntu:24.04` (a digest-qualified
+24.04 reference is also accepted); `latest` and other releases are rejected.
+
 ## Requirements
 
 - Linux
@@ -17,7 +31,7 @@ Install the latest release for your architecture:
 curl -fsSL https://raw.githubusercontent.com/MuktadirHassan/box/main/install.sh | sh
 ```
 
-The script downloads the archive and `checksums.txt`, verifies the archive, installs `box` to `~/.local/bin`, and generates Fish, Bash, and Zsh completions. Pass `--no-completions` to skip completion installation.
+The script downloads the archive and `checksums.txt`, verifies the archive, and installs `box` to `~/.local/bin`. By default it generates Fish, Bash, and Zsh completions; pass `--no-completions` to skip them, or use `--shell bash`, `--shell fish`, or `--shell zsh` to install a single completion. Fish discovers its completion automatically. Bash requires the usual `bash-completion` user-completion support.
 
 To install a specific version or use another destination:
 
@@ -71,8 +85,13 @@ box setup work \
   --mount "$HOME/projects:/workspace" \
   --cpus 4 \
   --memory 8g \
+  --template terminal-tools \
+  --shell fish \
+  --prompt starship \
   --yes
 ```
+
+`terminal-tools` currently supports Ubuntu images. It installs Bash, Fish, or Zsh as selected, and can add a Starship prompt without changing existing shell configuration. Use `box setup work --refresh-template --yes` after a template update to add new default files without overwriting files already in the persistent home.
 
 Run a command or manage environments:
 
@@ -138,5 +157,5 @@ Box follows [Semantic Versioning](https://semver.org/). `v0.1.0` is the first re
 
 - [Releases](https://github.com/MuktadirHassan/box/releases)
 - [Architecture](architecture.md)
-- [Environment templates](internal/templates/README.md)
+- [Environment templates](templates/README.md)
 - `box --help`

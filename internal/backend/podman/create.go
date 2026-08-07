@@ -14,13 +14,18 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	if err := validateConfiguration(configuration); err != nil {
 		return nil, err
 	}
+	shell, err := shellPath(configuration.Shell)
+	if err != nil {
+		return nil, err
+	}
 
 	home := containerHome(configuration.User)
 	arguments := []string{
 		"create", "--tty", "--name", containerName(definition.Name),
 		"--userns", "keep-id", "--user", containerUser(os.Getuid(), os.Getgid()),
-		"--passwd-entry", passwdEntry(configuration.User, home, os.Getuid(), os.Getgid()),
+		"--passwd-entry", passwdEntry(configuration.User, home, shell, os.Getuid(), os.Getgid()),
 		"--env", "HOME=" + home, "--env", "USER=" + configuration.User, "--env", "LOGNAME=" + configuration.User,
+		"--env", "BOX_TEMPLATE=" + configuration.Template, "--env", "BOX_TEMPLATE_REVISION=" + strconv.Itoa(configuration.TemplateRevision), "--env", "BOX_PROMPT=" + configuration.Prompt, "--env", "SHELL=" + shell,
 		"--workdir", home, "--hostname", definition.Name,
 		"--network", networkMode(configuration.Network), "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 	}
@@ -58,7 +63,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 		}
 	}
 
-	return append(arguments, configuration.Image, "/bin/sh"), nil
+	return append(arguments, configuration.Image, shell), nil
 }
 
 func (b *Backend) withClipboard(arguments []string) ([]string, error) {

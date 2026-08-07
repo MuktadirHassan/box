@@ -15,7 +15,7 @@ func writeDefinition(writer io.Writer, definition box.Definition) error {
 		return nil
 	}
 	configuration := definition.Configuration
-	if _, err := fmt.Fprintf(writer, "image: %s\nuser: %s\nnetwork: %s\ntemplate: %s\npersistent home: %t\npersistent caches: %t\n", configuration.Image, configuration.User, configuration.Network, configuration.Template, configuration.Home.Enabled, configuration.Caches.Enabled); err != nil {
+	if _, err := fmt.Fprintf(writer, "image: %s\nuser: %s\nnetwork: %s\ntemplate: %s\nshell: %s\nprompt: %s\npersistent home: %t\npersistent caches: %t\n", configuration.Image, configuration.User, configuration.Network, configuration.Template, configuration.Shell, configuration.Prompt, configuration.Home.Enabled, configuration.Caches.Enabled); err != nil {
 		return err
 	}
 	if configuration.Limits.CPUs != "" {

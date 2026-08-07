@@ -1,0 +1,21 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG BOX_SHELL=sh
+ARG BOX_PROMPT=none
+ARG BOX_TEMPLATE_REVISION=0
+
+RUN case "$BOX_SHELL" in sh|bash) shell_package=;; fish|zsh) shell_package="$BOX_SHELL";; *) exit 1;; esac \
+ && case "$BOX_PROMPT" in none) prompt_package=;; starship) prompt_package=starship;; *) exit 1;; esac \
+ && apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+      $shell_package jq neovim tmux ripgrep $prompt_package wl-clipboard \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN test "$BOX_TEMPLATE_REVISION" -ge 0
+
+COPY dotfiles/ /usr/local/share/box-template/dotfiles/
+COPY initialize-home /usr/local/bin/box-initialize-home
+RUN chmod 0755 /usr/local/bin/box-initialize-home
+
+ENTRYPOINT ["/usr/local/bin/box-initialize-home"]

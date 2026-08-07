@@ -10,26 +10,34 @@ import (
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/templates"
 	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 type setupOptions struct {
-	backend   string
-	image     string
-	user      string
-	mounts    []string
-	cpus      string
-	memory    string
-	pids      int
-	network   string
-	template  string
-	clipboard bool
-	sshAgent  bool
-	yes       bool
+	backend         string
+	image           string
+	user            string
+	mounts          []string
+	cpus            string
+	memory          string
+	pids            int
+	network         string
+	template        string
+	shell           string
+	prompt          string
+	refreshTemplate bool
+	clipboard       bool
+	sshAgent        bool
+	yes             bool
 }
 
-func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, presenter ui.Presenter) *cobra.Command {
+func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, presenter ui.Presenter, catalogs ...templates.Catalog) *cobra.Command {
+	var catalog templates.Catalog
+	if len(catalogs) > 0 {
+		catalog = catalogs[0]
+	}
 	options := setupOptions{}
 	command := &cobra.Command{
 		Use:   "setup <name>",
@@ -47,6 +55,13 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				return err
 			}
 			definition.Configuration = configuration
+			if command.Flags().Changed("template") && definition.Configuration.Template != "" && catalog != nil {
+				resolved, resolveErr := catalog.Resolve(definition.Configuration.Template)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				definition.Configuration.Template = resolved.Descriptor().ID
+			}
 			if previous.State == box.CreatedState && !options.yes && !setupConfigurationFlagsChanged(command) && presenter != nil {
 				definition, err = presenter.ConfigureInitial(definition)
 				if err != nil {
@@ -61,6 +76,17 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 			}
 			if err := box.ValidateBackend(definition.Backend); err != nil {
 				return err
+			}
+			definition.Configuration = box.NormalizeConfiguration(definition.Configuration)
+			var runtime backend.Backend
+			if runtimes != nil {
+				runtime, err = runtimes.Get(definition.Backend)
+				if err != nil {
+					return err
+				}
+				if err := runtime.ValidateConfiguration(definition.Configuration); err != nil {
+					return err
+				}
 			}
 			definition.State = box.ReadyState
 
@@ -104,10 +130,6 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				return err
 			}
 
-			runtime, err := runtimes.Get(definition.Backend)
-			if err != nil {
-				return err
-			}
 			if err := runtime.Validate(context.Background()); err != nil {
 				return err
 			}
@@ -156,6 +178,9 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 	flags.IntVar(&options.pids, "pids-limit", 0, "process limit")
 	flags.StringVar(&options.network, "network", "", "network policy: outbound or none")
 	flags.StringVar(&options.template, "template", "", "environment template name")
+	flags.StringVar(&options.shell, "shell", "", "interactive shell: sh, bash, fish, or zsh")
+	flags.StringVar(&options.prompt, "prompt", "", "prompt: starship or none")
+	flags.BoolVar(&options.refreshTemplate, "refresh-template", false, "reapply new template defaults without overwriting existing files")
 	flags.BoolVar(&options.clipboard, "clipboard", false, "enable host clipboard integration")
 	flags.BoolVar(&options.sshAgent, "ssh-agent", false, "enable SSH agent forwarding")
 	flags.BoolVar(&options.yes, "yes", false, "save the displayed configuration")
@@ -205,6 +230,15 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	if flags.Changed("template") {
 		configuration.Template = options.template
 	}
+	if flags.Changed("shell") {
+		configuration.Shell = options.shell
+	}
+	if flags.Changed("prompt") {
+		configuration.Prompt = options.prompt
+	}
+	if options.refreshTemplate {
+		configuration.TemplateRevision++
+	}
 	if flags.Changed("clipboard") {
 		configuration.Integrations.Clipboard = options.clipboard
 	}
@@ -212,27 +246,15 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 		configuration.Integrations.SSHAgent = options.sshAgent
 	}
 
-	if configuration.Image == "" {
-		return box.Configuration{}, fmt.Errorf("base image cannot be empty")
-	}
-	if err := box.ValidateUser(configuration.User); err != nil {
-		return box.Configuration{}, err
-	}
-	if configuration.Limits.PIDsLimit < 0 {
-		return box.Configuration{}, fmt.Errorf("process limit cannot be negative")
-	}
-	if configuration.Network != "outbound" && configuration.Network != "none" {
-		return box.Configuration{}, fmt.Errorf("network policy %q is not supported; use outbound or none", configuration.Network)
-	}
-	if err := box.ValidateTemplate(configuration.Template); err != nil {
-		return box.Configuration{}, err
+	if options.refreshTemplate && configuration.Template == "" {
+		return box.Configuration{}, fmt.Errorf("--refresh-template requires an environment template")
 	}
 
-	return configuration, nil
+	return box.NormalizeConfiguration(configuration), nil
 }
 
 func setupConfigurationFlagsChanged(command *cobra.Command) bool {
-	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "template", "clipboard", "ssh-agent"} {
+	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "template", "shell", "prompt", "refresh-template", "clipboard", "ssh-agent"} {
 		if command.Flags().Changed(name) {
 			return true
 		}

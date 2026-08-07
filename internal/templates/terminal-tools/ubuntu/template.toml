@@ -1,4 +1,0 @@
-name = "terminal-tools"
-version = 1
-description = "Fish, Tmux, Neovim, and terminal utilities"
-family = "ubuntu"
