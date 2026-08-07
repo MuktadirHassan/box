@@ -1,0 +1,10 @@
+name = "ubuntu-24.04-terminal-tools"
+version = 1
+family = "ubuntu"
+description = "Ubuntu 24.04 — Terminal tools"
+[compatibility]
+image_family = "ubuntu"
+image_version = "24.04"
+[capabilities]
+shells = ["sh", "bash", "fish", "zsh"]
+prompts = ["none", "starship"]

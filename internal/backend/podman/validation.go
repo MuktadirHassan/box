@@ -21,8 +21,14 @@ func (b *Backend) ValidateConfiguration(configuration box.Configuration) error {
 	if err := box.ValidateTemplate(configuration.Template); err != nil {
 		return err
 	}
-	if err := templates.ValidateCompatibility(configuration.Template, configuration.Image); err != nil {
-		return err
+	if configuration.Template != "" {
+		resolved, err := b.catalog.Resolve(configuration.Template)
+		if err != nil {
+			return err
+		}
+		if err := resolved.Validate(templates.Request{Image: configuration.Image, Shell: configuration.Shell, Prompt: configuration.Prompt}); err != nil {
+			return err
+		}
 	}
 	if configuration.Template == "" && (configuration.Shell != "sh" || configuration.Prompt != "none") {
 		return fmt.Errorf("a non-default shell or prompt requires an environment template")
@@ -92,7 +98,20 @@ func secureSocket(path string) (string, error) {
 }
 
 func validImage(image string) bool {
-	return image != "" && strings.TrimSpace(image) == image && !strings.ContainsAny(image, " \t\r\n") && !strings.HasPrefix(image, "-")
+	if image == "" || strings.TrimSpace(image) != image || strings.ContainsAny(image, " \t\r\n") || strings.HasPrefix(image, "-") {
+		return false
+	}
+	if strings.Count(image, "@") > 1 {
+		return false
+	}
+	_, digest, hasDigest := strings.Cut(image, "@")
+	if hasDigest {
+		algorithm, value, valid := strings.Cut(digest, ":")
+		if !valid || algorithm == "" || value == "" || strings.Trim(value, "0123456789abcdefABCDEF") != "" || len(value) != 64 {
+			return false
+		}
+	}
+	return true
 }
 
 func validLimit(limit string) bool {

@@ -13,7 +13,54 @@ import (
 
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
+	"github.com/MuktadirHassan/box/internal/templates"
 )
+
+type fakeCatalog struct{ resolved templates.Resolved }
+
+func (c fakeCatalog) List() ([]templates.Descriptor, error) {
+	return []templates.Descriptor{c.resolved.Descriptor()}, nil
+}
+func (c fakeCatalog) Resolve(string) (templates.Resolved, error) { return c.resolved, nil }
+
+type fakeResolved struct {
+	descriptor  templates.Descriptor
+	validateErr error
+	built       bool
+}
+
+func (r *fakeResolved) Descriptor() templates.Descriptor { return r.descriptor }
+func (r *fakeResolved) Validate(templates.Request) error { return r.validateErr }
+func (r *fakeResolved) BuildContext(dir string) error {
+	r.built = true
+	return os.WriteFile(filepath.Join(dir, "Containerfile"), []byte("FROM scratch\n"), 0644)
+}
+
+func TestCreateUsesCatalogBuildContextAndRejectsBeforeRunner(t *testing.T) {
+	resolved := &fakeResolved{descriptor: templates.Descriptor{ID: "custom"}, validateErr: errors.New("incompatible")}
+	runner := &fakeRunner{}
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{Image: "custom:1", User: "dev", Network: "outbound", Template: "custom"}
+	if _, err := New(Options{Runner: runner, Catalog: fakeCatalog{resolved}}).Create(context.Background(), definition); err == nil {
+		t.Fatal("Create() error = nil")
+	}
+	if len(runner.outputCalls) != 0 || resolved.built {
+		t.Errorf("runner/build context used before compatibility rejection: %#v, %v", runner.outputCalls, resolved.built)
+	}
+
+	resolved.validateErr = nil
+	runner.outputs = []outputResult{{output: "image\n"}, {output: "container\n"}}
+	if _, err := New(Options{Runner: runner, Catalog: fakeCatalog{resolved}}).Create(context.Background(), definition); err != nil {
+		t.Fatal(err)
+	}
+	if !resolved.built {
+		t.Error("BuildContext was not called")
+	}
+	build := strings.Join(runner.outputCalls[0].arguments, "\x00")
+	if !strings.Contains(build, "BASE_IMAGE=custom:1") || !strings.Contains(build, "--file") || !strings.Contains(build, "Containerfile") {
+		t.Errorf("build arguments = %v", build)
+	}
+}
 
 type commandCall struct{ arguments []string }
 type outputResult struct {

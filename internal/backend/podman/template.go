@@ -18,8 +18,11 @@ func (b *Backend) buildTemplate(ctx context.Context, definition box.Definition) 
 	if err := box.ValidateTemplate(definition.Configuration.Template); err != nil {
 		return box.Definition{}, err
 	}
-	template, err := templates.Resolve(definition.Configuration.Template, definition.Configuration.Image)
+	template, err := b.catalog.Resolve(definition.Configuration.Template)
 	if err != nil {
+		return box.Definition{}, err
+	}
+	if err := template.Validate(templates.Request{Image: definition.Configuration.Image, Shell: definition.Configuration.Shell, Prompt: definition.Configuration.Prompt}); err != nil {
 		return box.Definition{}, err
 	}
 	directory, err := os.MkdirTemp("", "box-template-")

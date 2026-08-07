@@ -4,6 +4,20 @@ A Linux CLI for creating persistent, rootless Podman development environments.
 
 > **Alpha:** Box is pre-1.0 software. Interfaces, configuration, and behavior may change without migration support. Do not rely on it for critical workloads.
 
+## Environment templates
+
+Use the canonical template ID when configuring an environment:
+
+```bash
+box setup work --template ubuntu-24.04-terminal-tools --image ubuntu:24.04 --yes
+```
+
+Template IDs are backed by catalog manifests that declare image release,
+supported shells, and prompts. The legacy `terminal-tools` value remains
+accepted and is converted to the canonical ID only after a successful explicit
+setup update. Ubuntu 24.04 templates require `ubuntu:24.04` (a digest-qualified
+24.04 reference is also accepted); `latest` and other releases are rejected.
+
 ## Requirements
 
 - Linux
@@ -143,5 +157,5 @@ Box follows [Semantic Versioning](https://semver.org/). `v0.1.0` is the first re
 
 - [Releases](https://github.com/MuktadirHassan/box/releases)
 - [Architecture](architecture.md)
-- [Environment templates](internal/templates/README.md)
+- [Environment templates](templates/README.md)
 - `box --help`

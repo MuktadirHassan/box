@@ -12,11 +12,21 @@ import (
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/templates"
 	"github.com/MuktadirHassan/box/internal/ui"
+	assets "github.com/MuktadirHassan/box/templates"
 )
 
-type Presenter struct{}
+type Presenter struct{ catalog templates.Catalog }
 
-func NewPresenter() ui.Presenter { return Presenter{} }
+func NewPresenter(catalog ...templates.Catalog) ui.Presenter {
+	var c templates.Catalog
+	if len(catalog) > 0 {
+		c = catalog[0]
+	}
+	if c == nil {
+		c = templates.NewEmbeddedCatalog(assets.FS())
+	}
+	return Presenter{catalog: c}
+}
 
 var (
 	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
@@ -24,12 +34,12 @@ var (
 	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 )
 
-func (Presenter) ConfigureInitial(definition box.Definition) (box.Definition, error) {
+func (p Presenter) ConfigureInitial(definition box.Definition) (box.Definition, error) {
 	if !interactiveTerminal() {
 		return definition, nil
 	}
 	configuration := &definition.Configuration
-	templateOptions, err := environmentTemplateOptions()
+	templateOptions, err := environmentTemplateOptions(p.catalog)
 	if err != nil {
 		return box.Definition{}, err
 	}
@@ -51,8 +61,8 @@ func (Presenter) ConfigureInitial(definition box.Definition) (box.Definition, er
 	return definition, nil
 }
 
-func environmentTemplateOptions() ([]huh.Option[string], error) {
-	available, err := templates.All()
+func environmentTemplateOptions(catalog templates.Catalog) ([]huh.Option[string], error) {
+	available, err := catalog.List()
 	if err != nil {
 		return nil, fmt.Errorf("load environment templates: %w", err)
 	}

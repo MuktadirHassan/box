@@ -10,6 +10,7 @@ import (
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/templates"
 	"github.com/MuktadirHassan/box/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +33,11 @@ type setupOptions struct {
 	yes             bool
 }
 
-func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, presenter ui.Presenter) *cobra.Command {
+func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, presenter ui.Presenter, catalogs ...templates.Catalog) *cobra.Command {
+	var catalog templates.Catalog
+	if len(catalogs) > 0 {
+		catalog = catalogs[0]
+	}
 	options := setupOptions{}
 	command := &cobra.Command{
 		Use:   "setup <name>",
@@ -50,6 +55,13 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				return err
 			}
 			definition.Configuration = configuration
+			if command.Flags().Changed("template") && definition.Configuration.Template != "" && catalog != nil {
+				resolved, resolveErr := catalog.Resolve(definition.Configuration.Template)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				definition.Configuration.Template = resolved.Descriptor().ID
+			}
 			if previous.State == box.CreatedState && !options.yes && !setupConfigurationFlagsChanged(command) && presenter != nil {
 				definition, err = presenter.ConfigureInitial(definition)
 				if err != nil {

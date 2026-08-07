@@ -4,20 +4,34 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
+	"github.com/MuktadirHassan/box/internal/templates"
+	assets "github.com/MuktadirHassan/box/templates"
 )
 
 type Backend struct {
-	runner Runner
-	env    func(string) string
+	runner  Runner
+	env     func(string) string
+	catalog templates.Catalog
+}
+
+func isNilCatalog(catalog templates.Catalog) bool {
+	v := reflect.ValueOf(catalog)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
 }
 
 type Options struct {
-	Runner Runner
-	Env    func(string) string
+	Runner  Runner
+	Env     func(string) string
+	Catalog templates.Catalog
 }
 
 func New(options Options) *Backend {
@@ -30,7 +44,11 @@ func New(options Options) *Backend {
 		env = os.Getenv
 	}
 
-	return &Backend{runner: runner, env: env}
+	catalog := options.Catalog
+	if catalog == nil || isNilCatalog(catalog) {
+		catalog = templates.NewEmbeddedCatalog(assets.FS())
+	}
+	return &Backend{runner: runner, env: env, catalog: catalog}
 }
 
 func (b *Backend) Name() box.Backend { return box.PodmanBackend }

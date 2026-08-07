@@ -5,7 +5,25 @@ import (
 	"testing"
 
 	"github.com/MuktadirHassan/box/internal/box"
+	"github.com/MuktadirHassan/box/internal/templates"
 )
+
+type presenterCatalog struct{}
+
+func (presenterCatalog) List() ([]templates.Descriptor, error) {
+	return []templates.Descriptor{{ID: "opaque-id", Name: "opaque-id", Description: "Manifest label"}}, nil
+}
+func (presenterCatalog) Resolve(string) (templates.Resolved, error) { return nil, nil }
+
+func TestEnvironmentTemplateOptionsUseCatalogLabelsAndCanonicalValues(t *testing.T) {
+	options, err := environmentTemplateOptions(presenterCatalog{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(options) != 2 || options[1].Value != "opaque-id" || options[1].Key != "Manifest label" {
+		t.Fatalf("options = %#v", options)
+	}
+}
 
 func TestShowDefinitionAndRuntimeAlignInspectFields(t *testing.T) {
 	definition := box.Definition{Name: "demo", State: box.ReadyState, Backend: box.PodmanBackend, Version: 1, Configuration: box.Configuration{Image: "ubuntu:24.04", User: "swift-maple", Network: "outbound", Home: box.Persistence{Enabled: true}, Caches: box.Persistence{Enabled: true}}}
