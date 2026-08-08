@@ -8,6 +8,18 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.2.0](https://github.com/MuktadirHassan/box/compare/v0.1.5...v0.2.0) (2026-08-08)
+
+
+### Features
+
+* make Ubuntu boxes mutable dev environments ([#23](https://github.com/MuktadirHassan/box/issues/23)) ([b67a491](https://github.com/MuktadirHassan/box/commit/b67a4911ad1c648c0970733e128f7d206dc41f96))
+
+
+### Bug Fixes
+
+* update go.mod and go.sum to remove indirect dependencies ([d8af9d8](https://github.com/MuktadirHassan/box/commit/d8af9d80e34df7abb3d3d21e888c5b175480ecfd))
+
 ## [0.1.5](https://github.com/MuktadirHassan/box/compare/v0.1.4...v0.1.5) (2026-08-08)
 
 
