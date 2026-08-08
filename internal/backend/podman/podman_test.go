@@ -119,7 +119,7 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	runner := &fakeRunner{outputs: []outputResult{{output: "image-id\n"}, {output: "container-id\n"}}}
 	definition := box.NewDefinition("demo")
-	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "terminal-tools", Shell: "fish", Prompt: "starship"}
+	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "ubuntu-24.04-terminal-tools", Shell: "fish", Prompt: "starship"}
 
 	if _, err := New(Options{Runner: runner}).Create(context.Background(), definition); err != nil {
 		t.Fatalf("Create() error = %v", err)

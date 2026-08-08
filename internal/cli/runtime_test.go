@@ -170,7 +170,7 @@ func TestSetupRejectsUnsupportedTemplateImageBeforeRuntimeChanges(t *testing.T) 
 		t.Fatal(err)
 	}
 	command := NewRootCommand(definitions, registry)
-	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--template", "terminal-tools", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--template", "ubuntu-24.04-terminal-tools", "--yes"})
 	if err := command.Execute(); err == nil {
 		t.Fatal("setup error = nil for an unsupported template image")
 	}
@@ -185,7 +185,7 @@ func TestSetupRefreshTemplateRecreatesRuntime(t *testing.T) {
 	definition.State = box.ReadyState
 	definition.Configuration = box.DefaultConfiguration()
 	definition.Configuration.User = "dev"
-	definition.Configuration.Template = "terminal-tools"
+	definition.Configuration.Template = "ubuntu-24.04-terminal-tools"
 	if err := definitions.Create(definition); err != nil {
 		t.Fatal(err)
 	}

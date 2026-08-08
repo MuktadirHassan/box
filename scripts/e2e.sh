@@ -78,7 +78,7 @@ persistent_output=$($box_binary exec "$box_name" -- sh -c 'printf "%s:%s" "$(cat
 [[ "$persistent_output" == "home:cache" ]] || fail "persistent data did not survive recreation: $persistent_output"
 
 $box_binary stop "$box_name"
-template_output=$($box_binary setup "$box_name" --network outbound --template terminal-tools --shell bash --yes)
+template_output=$($box_binary setup "$box_name" --network outbound --template ubuntu-24.04-terminal-tools --shell bash --yes)
 expect_contains "$template_output" "ubuntu-24.04-terminal-tools"
 expect_contains "$template_output" "Recreated box \"$box_name\""
 podman start "$container_name" >/dev/null

@@ -23,13 +23,12 @@ Users should not need to use a backend's commands directly.
 Templates are selected by opaque canonical IDs such as
 `ubuntu-24.04-terminal-tools`. The `templates.Catalog` port lists descriptors
 and resolves validated templates; the embedded-files adapter owns manifests,
-aliases, flat filesystem layout, and build-context materialization. Podman,
-CLI, and terminal presentation receive the port by constructor injection and do
-not depend on embedded assets or image-specific UI rules. Manifest compatibility
+flat filesystem layout, and build-context materialization. Podman, CLI, and
+terminal presentation receive the port by constructor injection and do not
+depend on embedded assets or image-specific UI rules. Manifest compatibility
 pins an image family and release (including digest-qualified references), while
 manifest version is schema compatibility and `TemplateRevision` controls home
-refreshes. The legacy `terminal-tools` alias remains fixed to Ubuntu 24.04 and
-is canonicalized only by successful explicit setup updates.
+refreshes.
 
 Built-in template assets live under the repository-root `templates/<template-id>/` directories, separate from Go source. The root `templates` package owns only the `go:embed` filesystem; `internal/templates` receives that filesystem through `NewEmbeddedCatalog`, preserving the catalog port without a parent-path embed or import cycle. Adding a top-level template directory is therefore automatically included by the root package's `all:` embed pattern.
 

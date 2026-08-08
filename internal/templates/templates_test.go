@@ -12,7 +12,7 @@ import (
 )
 
 func TestLoadTerminalTools(t *testing.T) {
-	template, err := Resolve("terminal-tools", "ubuntu:24.04")
+	template, err := Resolve("ubuntu-24.04-terminal-tools", "ubuntu:24.04")
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -22,7 +22,7 @@ func TestLoadTerminalTools(t *testing.T) {
 	if _, err := Resolve("missing", "ubuntu:24.04"); err == nil {
 		t.Error("Resolve() error = nil for missing template")
 	}
-	if _, err := Resolve("terminal-tools", "archlinux:latest"); err == nil {
+	if _, err := Resolve("ubuntu-24.04-terminal-tools", "archlinux:latest"); err == nil {
 		t.Error("Resolve() error = nil for unsupported image family")
 	}
 }
@@ -79,7 +79,7 @@ func TestCatalogContractEmbedded(t *testing.T) {
 	if first[0].Description != "Ubuntu 24.04 — Terminal tools" || !contains(first[0].Shells, "fish") || !contains(first[0].Prompts, "starship") {
 		t.Errorf("descriptor metadata = %#v", first[0])
 	}
-	for _, id := range []string{"ubuntu-22.04-terminal-tools", "missing"} {
+	for _, id := range []string{"terminal-tools", "ubuntu-22.04-terminal-tools", "missing"} {
 		if _, err := catalog.Resolve(id); err == nil {
 			t.Errorf("Resolve(%q) error = nil", id)
 		}
@@ -87,13 +87,6 @@ func TestCatalogContractEmbedded(t *testing.T) {
 	canonical, err := catalog.Resolve("ubuntu-24.04-terminal-tools")
 	if err != nil {
 		t.Fatal(err)
-	}
-	legacy, err := catalog.Resolve("terminal-tools")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if canonical.Descriptor().ID != legacy.Descriptor().ID {
-		t.Errorf("legacy ID = %q, canonical = %q", legacy.Descriptor().ID, canonical.Descriptor().ID)
 	}
 	for _, request := range []Request{{Image: "ubuntu:22.04", Shell: "fish", Prompt: "starship"}, {Image: "ubuntu:24.04", Shell: "bash", Prompt: "unknown"}} {
 		if err := canonical.Validate(request); err == nil {
@@ -126,7 +119,7 @@ func TestRegistryRejectsNilAndDuplicateProviders(t *testing.T) {
 }
 
 func TestBuildContextIncludesTemplateAssets(t *testing.T) {
-	template, err := Resolve("terminal-tools", "ubuntu:24.04")
+	template, err := Resolve("ubuntu-24.04-terminal-tools", "ubuntu:24.04")
 	if err != nil {
 		t.Fatal(err)
 	}
