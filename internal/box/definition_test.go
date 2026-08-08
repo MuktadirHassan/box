@@ -3,8 +3,10 @@ package box
 import "testing"
 
 func TestValidateTemplate(t *testing.T) {
-	if err := ValidateTemplate("terminal-tools"); err != nil {
-		t.Fatalf("ValidateTemplate() error = %v", err)
+	for _, name := range []string{"terminal-tools", "ubuntu-24.04-terminal-tools"} {
+		if err := ValidateTemplate(name); err != nil {
+			t.Errorf("ValidateTemplate(%q) error = %v", name, err)
+		}
 	}
 	if err := ValidateTemplate("../template"); err == nil {
 		t.Error("ValidateTemplate() error = nil for an invalid name")
