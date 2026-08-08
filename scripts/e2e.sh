@@ -21,7 +21,7 @@ fi
 workdir=$(mktemp -d)
 test_home="$workdir/home"
 box_binary="$workdir/box"
-run_suffix=$(basename "$workdir" | tr -cd '[:alnum:]')
+run_suffix=$(basename "$workdir" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')
 box_name="e2e-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${run_suffix}"
 container_name="box-$box_name"
 home_volume="$container_name-home"
