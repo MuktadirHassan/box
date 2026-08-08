@@ -163,7 +163,7 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 	if strings.Contains(string(containerfile), "rm -rf /var/lib/apt/lists/*") {
 		t.Error("Containerfile removes APT package indexes needed by mutable boxes")
 	}
-	for _, packageName := range []string{"ca-certificates", "curl", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "procps", "ripgrep", "sudo", "tmux", "wl-clipboard"} {
+	for _, packageName := range []string{"build-essential", "ca-certificates", "curl", "file", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "procps", "ripgrep", "sudo", "tmux", "wl-clipboard"} {
 		if !strings.Contains(string(containerfile), packageName) {
 			t.Errorf("Containerfile does not install %q", packageName)
 		}
@@ -178,7 +178,31 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 			t.Errorf("Containerfile does not install Starship using %q", installerDetail)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(directory, "dotfiles", ".config", "fish", "config.fish")); err != nil {
-		t.Errorf("dotfiles are missing from build context: %v", err)
+	for _, installerDetail := range []string{"dpkg --print-architecture", "fastfetch-linux-${fastfetch_arch}.deb", "dpkg --install /tmp/fastfetch.deb"} {
+		if !strings.Contains(string(containerfile), installerDetail) {
+			t.Errorf("Containerfile does not install Fastfetch using %q", installerDetail)
+		}
+	}
+	for _, installerDetail := range []string{"NONINTERACTIVE=1", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh", "curl https://mise.run/fish | sh"} {
+		if !strings.Contains(string(containerfile), installerDetail) {
+			t.Errorf("Containerfile does not install Homebrew or Mise using %q", installerDetail)
+		}
+	}
+	fishConfig, err := os.ReadFile(filepath.Join(directory, "dotfiles", ".config", "fish", "config.fish"))
+	if err != nil {
+		t.Fatalf("read Fish configuration: %v", err)
+	}
+	if !strings.Contains(string(fishConfig), "/home/linuxbrew/.linuxbrew/bin/brew shellenv") {
+		t.Error("Fish configuration does not initialize Homebrew")
+	}
+	if !strings.Contains(string(fishConfig), "fastfetch") {
+		t.Error("Fish configuration does not run Fastfetch")
+	}
+	starshipConfig, err := os.ReadFile(filepath.Join(directory, "dotfiles", ".config", "starship.toml"))
+	if err != nil {
+		t.Fatalf("read Starship configuration: %v", err)
+	}
+	if !strings.Contains(string(starshipConfig), "[container]\ndisabled = true") {
+		t.Error("Starship configuration does not disable the container module")
 	}
 }

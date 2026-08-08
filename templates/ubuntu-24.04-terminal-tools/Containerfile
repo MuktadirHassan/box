@@ -12,8 +12,12 @@ RUN case "$BOX_SHELL" in sh|bash) shell_package=;; fish|zsh) shell_package="$BOX
  && case "$BOX_PROMPT" in none) install_starship=false;; starship) install_starship=true;; *) exit 1;; esac \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-      ca-certificates curl git iproute2 iputils-ping jq neovim procps ripgrep sudo tmux \
+      build-essential ca-certificates curl file git iproute2 iputils-ping jq neovim procps ripgrep sudo tmux \
       $shell_package wl-clipboard \
+ && case "$(dpkg --print-architecture)" in amd64) fastfetch_arch=amd64;; arm64) fastfetch_arch=aarch64;; *) exit 1;; esac \
+ && curl --fail --show-error --silent --location "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-${fastfetch_arch}.deb" --output /tmp/fastfetch.deb \
+ && dpkg --install /tmp/fastfetch.deb \
+ && rm /tmp/fastfetch.deb \
  && if "$install_starship"; then curl --fail --show-error --silent --location https://starship.rs/install.sh | sh -s -- --yes --bin-dir /usr/local/bin; fi
 
 RUN test -n "$BOX_USER" \
@@ -32,6 +36,11 @@ RUN test -n "$BOX_USER" \
 
 COPY dotfiles/ /usr/local/share/box-template/dotfiles/
 COPY initialize-home /usr/local/bin/box-initialize-home
-RUN chmod 0755 /usr/local/bin/box-initialize-home
+
+RUN chmod 0755 /usr/local/bin/box-initialize-home \
+ && cp -R /usr/local/share/box-template/dotfiles/. "/home/$BOX_USER/" \
+ && chown -R "$BOX_UID:$BOX_GID" "/home/$BOX_USER" \
+ && runuser --user "$BOX_USER" -- env HOME="/home/$BOX_USER" NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
+ && runuser --user "$BOX_USER" -- env HOME="/home/$BOX_USER" /usr/bin/fish -c 'curl https://mise.run/fish | sh'
 
 ENTRYPOINT ["/usr/local/bin/box-initialize-home"]
