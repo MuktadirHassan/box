@@ -1,6 +1,7 @@
 {
   "draft": true,
   "force-tag-creation": true,
+  "bootstrap-sha": "c3754de84f334b438587fc16237801f3c15a7ac2",
   "packages": {
     ".": {
       "release-type": "go",
