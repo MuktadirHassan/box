@@ -14,11 +14,66 @@ builds:
     ldflags:
       - -s -w -X github.com/MuktadirHassan/box/internal/version.Version={{ .Version }}
 
+  - id: box-desktop
+    main: ./desktop
+    binary: box-desktop
+    env:
+      - CGO_ENABLED=1
+    tags:
+      - webkit2_41
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w -X github.com/MuktadirHassan/box/internal/version.Version={{ .Version }}
+
 archives:
   - id: box
+    ids:
+      - box
     formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+nfpms:
+  - id: box-desktop
+    package_name: box-desktop
+    ids:
+      - box-desktop
+    vendor: MuktadirHassan
+    homepage: https://github.com/MuktadirHassan/box
+    maintainer: MuktadirHassan
+    description: Manage development boxes from a native desktop application.
+    bindir: /usr/bin
+    formats:
+      - deb
+      - rpm
+      - archlinux
+    contents:
+      - src: desktop/packaging/box-desktop.desktop
+        dst: /usr/share/applications/box-desktop.desktop
+      - src: desktop/packaging/box-desktop.svg
+        dst: /usr/share/icons/hicolor/scalable/apps/box-desktop.svg
+    overrides:
+      deb:
+        dependencies:
+          - libc6 (>= 2.39)
+          - libgtk-3-0
+          - libwebkit2gtk-4.1-0
+          - podman
+      rpm:
+        dependencies:
+          - glibc >= 2.39
+          - gtk3
+          - webkit2gtk4.1
+          - podman
+      archlinux:
+        dependencies:
+          - glibc>=2.39
+          - gtk3
+          - webkit2gtk-4.1
+          - podman
 
 checksum:
   name_template: "checksums.txt"

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Box
+Comment=Manage development boxes
+Exec=box-desktop
+Icon=box-desktop
+Terminal=false
+Categories=Development;System;
+StartupNotify=true
