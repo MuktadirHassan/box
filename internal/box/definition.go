@@ -73,12 +73,13 @@ func NewDefinition(name string) Definition {
 
 func DefaultConfiguration() Configuration {
 	return Configuration{
-		Image:   "ubuntu:24.04",
-		Home:    Persistence{Enabled: true},
-		Caches:  Persistence{Enabled: true},
-		Network: "outbound",
-		Shell:   "sh",
-		Prompt:  "none",
+		Image:    "ubuntu:24.04",
+		Home:     Persistence{Enabled: true},
+		Caches:   Persistence{Enabled: true},
+		Network:  "outbound",
+		Template: "ubuntu-24.04-terminal-tools",
+		Shell:    "sh",
+		Prompt:   "none",
 	}
 }
 

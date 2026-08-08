@@ -13,6 +13,16 @@ func TestValidateTemplate(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigurationUsesUbuntuDevelopmentEnvironment(t *testing.T) {
+	configuration := DefaultConfiguration()
+	if configuration.Image != "ubuntu:24.04" || configuration.Template != "ubuntu-24.04-terminal-tools" {
+		t.Errorf("DefaultConfiguration() = %#v", configuration)
+	}
+	if !configuration.Home.Enabled || !configuration.Caches.Enabled || configuration.Network != "outbound" {
+		t.Errorf("DefaultConfiguration() persistence/network = %#v", configuration)
+	}
+}
+
 func TestNewDefinitionUsesInitialValues(t *testing.T) {
 	definition := NewDefinition("demo")
 

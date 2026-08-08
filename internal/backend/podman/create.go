@@ -23,12 +23,16 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	arguments := []string{
 		"create", "--tty", "--name", containerName(definition.Name),
 		"--userns", "keep-id", "--user", containerUser(os.Getuid(), os.Getgid()),
-		"--passwd-entry", passwdEntry(configuration.User, home, shell, os.Getuid(), os.Getgid()),
-		"--env", "HOME=" + home, "--env", "USER=" + configuration.User, "--env", "LOGNAME=" + configuration.User,
-		"--env", "BOX_TEMPLATE=" + configuration.Template, "--env", "BOX_TEMPLATE_REVISION=" + strconv.Itoa(configuration.TemplateRevision), "--env", "BOX_PROMPT=" + configuration.Prompt, "--env", "SHELL=" + shell,
-		"--workdir", home, "--hostname", definition.Name,
-		"--network", networkMode(configuration.Network), "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 	}
+	if configuration.Template == "" {
+		arguments = append(arguments, "--passwd-entry", passwdEntry(configuration.User, home, shell, os.Getuid(), os.Getgid()))
+	}
+	arguments = append(arguments,
+		"--env", "HOME="+home, "--env", "USER="+configuration.User, "--env", "LOGNAME="+configuration.User,
+		"--env", "BOX_TEMPLATE="+configuration.Template, "--env", "BOX_TEMPLATE_REVISION="+strconv.Itoa(configuration.TemplateRevision), "--env", "BOX_PROMPT="+configuration.Prompt, "--env", "SHELL="+shell,
+		"--workdir", home, "--hostname", definition.Name,
+		"--network", networkMode(configuration.Network),
+	)
 	if configuration.Limits.PIDsLimit > 0 {
 		arguments = append(arguments, "--pids-limit", strconv.Itoa(configuration.Limits.PIDsLimit))
 	}

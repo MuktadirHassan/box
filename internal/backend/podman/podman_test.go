@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -114,6 +115,11 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	if !strings.Contains(joined, "--userns\x00keep-id") {
 		t.Errorf("arguments do not preserve the invoking user's identity: %#v", arguments)
 	}
+	for _, forbidden := range []string{"--read-only", "--cap-drop", "no-new-privileges", "--privileged", "--pid=host", "--network=host"} {
+		if strings.Contains(joined, forbidden) {
+			t.Errorf("arguments include unsupported restriction or host access %q: %#v", forbidden, arguments)
+		}
+	}
 }
 
 func TestCreateBuildsSelectedTemplate(t *testing.T) {
@@ -129,15 +135,15 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	}
 	build := runner.outputCalls[0].arguments
 	joinedBuild := strings.Join(build, "\x00")
-	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
+	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID="+strconv.Itoa(os.Getuid())) || !strings.Contains(joinedBuild, "BOX_GID="+strconv.Itoa(os.Getgid())) || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
 		t.Errorf("build arguments = %#v", build)
 	}
 	create := strings.Join(runner.outputCalls[1].arguments, "\x00")
 	if !strings.Contains(create, "box-demo-template\x00/usr/bin/fish") {
 		t.Errorf("create arguments do not use template image: %#v", runner.outputCalls[1].arguments)
 	}
-	if !strings.Contains(create, "SHELL=/usr/bin/fish") || !strings.Contains(create, fmt.Sprintf("dev:x:%d:%d::/home/dev:/usr/bin/fish", os.Getuid(), os.Getgid())) {
-		t.Errorf("create arguments do not use fish consistently: %#v", runner.outputCalls[1].arguments)
+	if !strings.Contains(create, "SHELL=/usr/bin/fish") || strings.Contains(create, "--passwd-entry") {
+		t.Errorf("create arguments do not rely on the template's fish user consistently: %#v", runner.outputCalls[1].arguments)
 	}
 }
 

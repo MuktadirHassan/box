@@ -1,6 +1,9 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
+ARG BOX_USER
+ARG BOX_UID
+ARG BOX_GID
 ARG BOX_SHELL=sh
 ARG BOX_PROMPT=none
 ARG BOX_TEMPLATE_REVISION=0
@@ -9,10 +12,23 @@ RUN case "$BOX_SHELL" in sh|bash) shell_package=;; fish|zsh) shell_package="$BOX
  && case "$BOX_PROMPT" in none) prompt_package=;; starship) prompt_package=starship;; *) exit 1;; esac \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-      $shell_package jq neovim tmux ripgrep $prompt_package wl-clipboard \
+      ca-certificates curl git iproute2 iputils-ping jq neovim procps ripgrep sudo tmux \
+      $shell_package $prompt_package wl-clipboard \
  && rm -rf /var/lib/apt/lists/*
 
-RUN test "$BOX_TEMPLATE_REVISION" -ge 0
+RUN test -n "$BOX_USER" \
+ && test "$BOX_UID" -gt 0 \
+ && test "$BOX_GID" -gt 0 \
+ && test "$BOX_TEMPLATE_REVISION" -ge 0 \
+ && case "$BOX_SHELL" in sh) shell_path=/bin/sh;; bash) shell_path=/bin/bash;; fish) shell_path=/usr/bin/fish;; zsh) shell_path=/usr/bin/zsh;; *) exit 1;; esac \
+ && existing_group="$(getent group "$BOX_GID" | cut -d: -f1)" \
+ && if [ -n "$existing_group" ] && [ "$existing_group" != "$BOX_USER" ]; then ! getent group "$BOX_USER" >/dev/null && groupmod --new-name "$BOX_USER" "$existing_group"; elif [ -z "$existing_group" ]; then ! getent group "$BOX_USER" >/dev/null && groupadd --gid "$BOX_GID" "$BOX_USER"; fi \
+ && existing_user="$(getent passwd "$BOX_UID" | cut -d: -f1)" \
+ && if [ -n "$existing_user" ] && [ "$existing_user" != "$BOX_USER" ]; then ! getent passwd "$BOX_USER" >/dev/null && usermod --login "$BOX_USER" "$existing_user"; elif [ -z "$existing_user" ]; then ! getent passwd "$BOX_USER" >/dev/null && useradd --no-create-home --uid "$BOX_UID" --gid "$BOX_GID" "$BOX_USER"; fi \
+ && usermod --home "/home/$BOX_USER" --shell "$shell_path" --gid "$BOX_GID" "$BOX_USER" \
+ && install --directory --owner "$BOX_UID" --group "$BOX_GID" --mode 0755 "/home/$BOX_USER" \
+ && printf '%s ALL=(ALL:ALL) NOPASSWD: ALL\n' "$BOX_USER" > "/etc/sudoers.d/box-$BOX_USER" \
+ && chmod 0440 "/etc/sudoers.d/box-$BOX_USER"
 
 COPY dotfiles/ /usr/local/share/box-template/dotfiles/
 COPY initialize-home /usr/local/bin/box-initialize-home

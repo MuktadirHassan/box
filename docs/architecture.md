@@ -39,9 +39,11 @@ A Box has three parts:
 - **Definition**: the saved configuration: backend, base environment, mounts,
   environment, limits, network policy, and enabled integrations.
 - **Runtime**: the replaceable backend-specific instance created from the
-  definition.
+  definition. A Podman runtime has a writable root filesystem, so packages and
+  system customization survive stop/start operations.
 - **Persistent state**: the home, caches, and backend metadata that should
-  survive a runtime recreation when possible.
+  survive a runtime recreation when possible. Runtime root-filesystem changes
+  are intentionally discarded when the runtime is recreated.
 
 The definition is human-readable, versioned, and independent of an existing
 runtime.
@@ -60,8 +62,9 @@ the backend.
 
 Box supports backends behind one internal interface. The initial backends are:
 
-- **Podman**: rootless containers; lightweight and suitable for trusted local
-  development.
+- **Podman**: writable rootless containers; lightweight and suitable for
+  trusted local development. The configured user can use passwordless `sudo`
+  as container root inside the rootless user namespace, not as host root.
 - **Lima**: persistent Linux VMs; a separate guest kernel and normal Docker or
   Podman workflows inside the guest.
 
@@ -83,9 +86,14 @@ not in the portable definition.
 Host exposure is always explicit and visible in `box inspect`.
 
 Never implicitly provide host container-engine sockets, SSH keys, cloud
-configuration, credential directories, or writable host mounts.
+configuration, credential directories, writable host mounts, host namespaces,
+or privileged containers.
 
+- Podman uses `keep-id` in a rootless user namespace. The normal Box user may
+  elevate inside the container, while container root remains mapped to an
+  unprivileged subordinate host ID.
 - Podman shares the host kernel and is not a boundary for hostile code.
+- Explicit writable mounts can modify their corresponding host files.
 - Lima provides a guest-kernel boundary, but a writable workspace mount can
   still modify host files.
 
