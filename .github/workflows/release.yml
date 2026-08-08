@@ -52,7 +52,7 @@ jobs:
         run: go build -tags webkit2_41 ./...
       - name: Smoke test desktop binary
         run: |
-          go build -tags webkit2_41 -o "$RUNNER_TEMP/box-desktop" ./desktop
+          go build -tags "desktop,production,webkit2_41" -o "$RUNNER_TEMP/box-desktop" ./desktop
           timeout --signal=KILL 20s xvfb-run -a bash -ceu '
             "$1" &
             pid=$!
