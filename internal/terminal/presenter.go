@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"charm.land/huh/v2"
@@ -58,7 +59,56 @@ func (p Presenter) ConfigureInitial(definition box.Definition) (box.Definition, 
 	if err := form.Run(); err != nil {
 		return box.Definition{}, fmt.Errorf("configure box: %w", err)
 	}
+	if err := configureMounts(configuration); err != nil {
+		return box.Definition{}, fmt.Errorf("configure mounts: %w", err)
+	}
 	return definition, nil
+}
+
+func configureMounts(configuration *box.Configuration) error {
+	for {
+		var addMount bool
+		if err := huh.NewConfirm().Title("Add a writable host mount?").Value(&addMount).Run(); err != nil {
+			return err
+		}
+		if !addMount {
+			return nil
+		}
+
+		var source, destination string
+		form := huh.NewForm(huh.NewGroup(
+			huh.NewInput().Title("Host source path").Description("An existing absolute file or directory. This mount is writable.").Value(&source).Validate(validateMountSource),
+			huh.NewInput().Title("Container destination").Description("An absolute clean path, or ~ / ~/path for this box user's home.").Value(&destination).Validate(validateMountDestination(configuration.User)),
+		))
+		if err := form.Run(); err != nil {
+			return err
+		}
+		configuration.Mounts = append(configuration.Mounts, box.Mount{Source: source, Destination: box.ResolveMountDestination(destination, configuration.User)})
+	}
+}
+
+func validateMountSource(source string) error {
+	if !filepath.IsAbs(source) {
+		return fmt.Errorf("mount source must be an absolute path")
+	}
+	info, err := os.Stat(source)
+	if err != nil {
+		return fmt.Errorf("inspect mount source %q: %w", source, err)
+	}
+	if !info.IsDir() && !info.Mode().IsRegular() {
+		return fmt.Errorf("mount source %q must be a file or directory", source)
+	}
+	return nil
+}
+
+func validateMountDestination(user string) func(string) error {
+	return func(destination string) error {
+		resolved := box.ResolveMountDestination(destination, user)
+		if !filepath.IsAbs(resolved) || filepath.Clean(resolved) != resolved || resolved == "/" {
+			return fmt.Errorf("mount destination must be a clean absolute path and cannot be /")
+		}
+		return nil
+	}
 }
 
 func environmentTemplateOptions(catalog templates.Catalog) ([]huh.Option[string], error) {

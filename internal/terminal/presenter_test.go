@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"bytes"
+	"path/filepath"
 	"testing"
 
 	"github.com/MuktadirHassan/box/internal/box"
@@ -14,6 +15,31 @@ func (presenterCatalog) List() ([]templates.Descriptor, error) {
 	return []templates.Descriptor{{ID: "opaque-id", Name: "opaque-id", Description: "Manifest label"}}, nil
 }
 func (presenterCatalog) Resolve(string) (templates.Resolved, error) { return nil, nil }
+
+func TestMountInputValidators(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "project")
+	if err := validateMountSource(source); err == nil {
+		t.Fatal("validateMountSource() error = nil for a missing source")
+	}
+	if err := validateMountSource("relative"); err == nil {
+		t.Fatal("validateMountSource() error = nil for a relative source")
+	}
+	if err := validateMountSource(filepath.Dir(source)); err != nil {
+		t.Fatalf("validateMountSource() error = %v for directory", err)
+	}
+
+	validateDestination := validateMountDestination("dev")
+	for _, destination := range []string{"~", "~/.claude", "/workspace"} {
+		if err := validateDestination(destination); err != nil {
+			t.Errorf("validateMountDestination(%q) error = %v", destination, err)
+		}
+	}
+	for _, destination := range []string{"relative", "/", "~/../outside"} {
+		if err := validateDestination(destination); err == nil {
+			t.Errorf("validateMountDestination(%q) error = nil", destination)
+		}
+	}
+}
 
 func TestEnvironmentTemplateOptionsUseCatalogLabelsAndCanonicalValues(t *testing.T) {
 	options, err := environmentTemplateOptions(presenterCatalog{})

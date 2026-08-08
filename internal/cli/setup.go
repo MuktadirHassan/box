@@ -209,7 +209,7 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 		configuration.Image = options.image
 	}
 	if flags.Changed("mount") {
-		mounts, err := parseMounts(options.mounts)
+		mounts, err := parseMounts(options.mounts, configuration.User)
 		if err != nil {
 			return box.Configuration{}, err
 		}
@@ -266,14 +266,14 @@ func requiresRuntimeRecreation(previous, next box.Definition) bool {
 	return previous.Backend != next.Backend || !reflect.DeepEqual(previous.Configuration, next.Configuration)
 }
 
-func parseMounts(values []string) ([]box.Mount, error) {
+func parseMounts(values []string, user string) ([]box.Mount, error) {
 	mounts := make([]box.Mount, 0, len(values))
 	for _, value := range values {
 		source, destination, ok := strings.Cut(value, ":")
 		if !ok || source == "" || destination == "" {
 			return nil, fmt.Errorf("invalid mount %q: use source:destination", value)
 		}
-		mounts = append(mounts, box.Mount{Source: source, Destination: destination})
+		mounts = append(mounts, box.Mount{Source: source, Destination: box.ResolveMountDestination(destination, user)})
 	}
 
 	return mounts, nil
