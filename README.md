@@ -86,12 +86,20 @@ code isolation.
 box setup work \
   --image ubuntu:24.04 \
   --mount "$HOME/projects:/workspace" \
+  --mount "$HOME/.claude:~/.claude" \
   --cpus 4 \
   --memory 8g \
   --shell fish \
   --prompt starship \
   --yes
 ```
+
+Interactive setup can add any number of writable host mounts. Repeat `--mount`
+for scripted setup. Destinations may be absolute paths or `~` / `~/path`; Box
+resolves the latter to the selected container user's home (for example,
+`/home/amber-otter/.claude`), not the host user's home. User mounts are
+read-write, and every `--mount` supplied to a later setup replaces the saved
+mount list.
 
 The built-in `ubuntu-24.04-terminal-tools` development template is selected by
 default. It supports Ubuntu 24.04 images, installs Bash, Fish, or Zsh as

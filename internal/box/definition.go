@@ -3,6 +3,7 @@ package box
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 const CurrentDefinitionVersion = 1
@@ -69,6 +70,18 @@ func NewDefinition(name string) Definition {
 		State:   CreatedState,
 		Backend: PodmanBackend,
 	}
+}
+
+func ContainerHome(user string) string { return "/home/" + user }
+
+func ResolveMountDestination(destination, user string) string {
+	if destination == "~" {
+		return ContainerHome(user)
+	}
+	if strings.HasPrefix(destination, "~/") {
+		return ContainerHome(user) + "/" + strings.TrimPrefix(destination, "~/")
+	}
+	return destination
 }
 
 func DefaultConfiguration() Configuration {

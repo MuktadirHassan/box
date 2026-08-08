@@ -19,7 +19,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 		return nil, err
 	}
 
-	home := containerHome(configuration.User)
+	home := box.ContainerHome(configuration.User)
 	arguments := []string{
 		"create", "--tty", "--name", containerName(definition.Name),
 		"--userns", "keep-id", "--user", containerUser(os.Getuid(), os.Getgid()),
