@@ -169,6 +169,18 @@ cd box
 go build -o box .
 ```
 
+### Test local changes with an existing Box
+
+Rebuild and replace the local binary after changing Box or an embedded template, then recreate the environment with the updated template:
+
+```bash
+go build -o box .
+install -Dm755 box "$HOME/.local/bin/box"
+box setup <box-name> --refresh-template --yes
+```
+
+Recreating a Box replaces its container root filesystem. The persistent home directory and explicit mounts remain, but packages and other root-filesystem changes made inside the existing container are removed. Use a test Box when developing template changes.
+
 ## Versioning and documentation
 
 Box follows [Semantic Versioning](https://semver.org/). `v0.1.0` is the first release; before `v1.0.0`, minor versions may contain breaking changes and patch versions contain compatible fixes.
