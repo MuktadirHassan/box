@@ -8,6 +8,13 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.3.0](https://github.com/MuktadirHassan/box/compare/v0.2.1...v0.3.0) (2026-08-08)
+
+
+### Features
+
+* add interactive writable mounts ([#26](https://github.com/MuktadirHassan/box/issues/26)) ([e780816](https://github.com/MuktadirHassan/box/commit/e780816a9047a7363cd36c209b6967ab295419f0))
+
 ## [0.2.1](https://github.com/MuktadirHassan/box/compare/v0.2.0...v0.2.1) (2026-08-08)
 
 
