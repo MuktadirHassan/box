@@ -6,6 +6,14 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.1.4](https://github.com/MuktadirHassan/box/compare/v0.1.3...v0.1.4) (2026-08-08)
+
+
+### Bug Fixes
+
+* allow periods in template IDs ([#15](https://github.com/MuktadirHassan/box/issues/15)) ([3ad97bb](https://github.com/MuktadirHassan/box/commit/3ad97bbed62c85751a8a4e0050f7edc9a2013d13))
+* clean up release staging drafts ([88e7aaa](https://github.com/MuktadirHassan/box/commit/88e7aaafdefc535049614081c076842b450e6b51))
+
 ## [0.1.3](https://github.com/MuktadirHassan/box/compare/v0.1.2...v0.1.3) (2026-08-08)
 
 
