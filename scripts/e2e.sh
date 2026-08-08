@@ -30,7 +30,8 @@ cleanup() {
   podman rm --force "$container_name" >/dev/null 2>&1 || true
   podman volume rm --force "$home_volume" "$cache_volume" >/dev/null 2>&1 || true
   podman image rm "$container_name-template" >/dev/null 2>&1 || true
-  rm -rf "$workdir"
+  podman system reset --force >/dev/null 2>&1 || true
+  rm -rf "$workdir" >/dev/null 2>&1 || true
   exit "$status"
 }
 trap cleanup EXIT
