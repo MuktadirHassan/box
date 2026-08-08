@@ -6,6 +6,15 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.1.3](https://github.com/MuktadirHassan/box/compare/v0.1.2...v0.1.3) (2026-08-08)
+
+
+### Bug Fixes
+
+* allow release workflow retries ([2b0b48a](https://github.com/MuktadirHassan/box/commit/2b0b48ab3a42c942d80e0b250c56b983a6abbb29))
+* build assets before publishing immutable releases ([3470cd6](https://github.com/MuktadirHassan/box/commit/3470cd6e76a04432fef5ee503a486bd1218a5d46))
+* preserve release boundary without prior tag ([cb5b4eb](https://github.com/MuktadirHassan/box/commit/cb5b4eb0a2f4ee9c4c776bc6c2f9b3bb58864f53))
+
 ## [0.1.2](https://github.com/MuktadirHassan/box/compare/v0.1.1...v0.1.2) (2026-08-07)
 
 
