@@ -148,7 +148,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := NewRootCommand(definitions, registry)
-	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "tamim", "--mount", "/work:~/workspace", "--mount", "/data:/workspace/data", "--memory", "4g", "--pids-limit", "512", "--template", "ubuntu-24.04-terminal-tools", "--shell", "fish", "--prompt", "starship", "--clipboard", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "testuser", "--mount", "/work:~/workspace", "--mount", "/data:/workspace/data", "--memory", "4g", "--pids-limit", "512", "--template", "ubuntu-24.04-terminal-tools", "--shell", "fish", "--prompt", "starship", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -163,8 +163,8 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if definition.Backend != box.PodmanBackend {
 		t.Errorf("Backend = %q, want %q", definition.Backend, box.PodmanBackend)
 	}
-	if definition.Configuration.User != "tamim" {
-		t.Errorf("User = %q, want tamim", definition.Configuration.User)
+	if definition.Configuration.User != "testuser" {
+		t.Errorf("User = %q, want testuser", definition.Configuration.User)
 	}
 	if definition.Configuration.Image != "ubuntu:24.04" {
 		t.Errorf("Image = %q, want ubuntu:24.04", definition.Configuration.Image)
@@ -181,7 +181,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if definition.Configuration.Template != "ubuntu-24.04-terminal-tools" {
 		t.Errorf("Template = %q, want %q", definition.Configuration.Template, "ubuntu-24.04-terminal-tools")
 	}
-	wantMounts := []box.Mount{{Source: "/work", Destination: "/home/tamim/workspace"}, {Source: "/data", Destination: "/workspace/data"}}
+	wantMounts := []box.Mount{{Source: "/work", Destination: "/home/testuser/workspace"}, {Source: "/data", Destination: "/workspace/data"}}
 	if mounts := definition.Configuration.Mounts; !reflect.DeepEqual(mounts, wantMounts) {
 		t.Errorf("Mounts = %#v, want %#v", mounts, wantMounts)
 	}

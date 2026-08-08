@@ -2,7 +2,6 @@ package podman
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -20,12 +19,13 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	}
 
 	home := box.ContainerHome(configuration.User)
+	uid, gid := b.identity()
 	arguments := []string{
 		"create", "--tty", "--name", containerName(definition.Name),
-		"--userns", "keep-id", "--user", containerUser(os.Getuid(), os.Getgid()),
+		"--userns", "keep-id", "--user", containerUser(uid, gid),
 	}
 	if configuration.Template == "" {
-		arguments = append(arguments, "--passwd-entry", passwdEntry(configuration.User, home, shell, os.Getuid(), os.Getgid()))
+		arguments = append(arguments, "--passwd-entry", passwdEntry(configuration.User, home, shell, uid, gid))
 	}
 	arguments = append(arguments,
 		"--env", "HOME="+home, "--env", "USER="+configuration.User, "--env", "LOGNAME="+configuration.User,

@@ -9,6 +9,20 @@ A Linux CLI for creating persistent, rootless Podman development environments.
 - Linux
 - [Podman](https://podman.io/) available to your user
 
+## Development
+
+Run the portable unit test suite from a clone:
+
+```bash
+go test ./...
+```
+
+The Podman end-to-end acceptance test is opt-in because it builds images, uses networked package repositories, and requires rootless Podman. It uses isolated temporary resources and cleans up only resources it creates:
+
+```bash
+RUN_E2E=1 scripts/e2e.sh
+```
+
 ## Install
 
 Install the latest release for your architecture:

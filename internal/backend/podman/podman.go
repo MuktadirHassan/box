@@ -14,9 +14,10 @@ import (
 )
 
 type Backend struct {
-	runner  Runner
-	env     func(string) string
-	catalog templates.Catalog
+	runner   Runner
+	env      func(string) string
+	identity func() (int, int)
+	catalog  templates.Catalog
 }
 
 func isNilCatalog(catalog templates.Catalog) bool {
@@ -29,9 +30,10 @@ func isNilCatalog(catalog templates.Catalog) bool {
 }
 
 type Options struct {
-	Runner  Runner
-	Env     func(string) string
-	Catalog templates.Catalog
+	Runner   Runner
+	Env      func(string) string
+	Identity func() (int, int)
+	Catalog  templates.Catalog
 }
 
 func New(options Options) *Backend {
@@ -43,12 +45,16 @@ func New(options Options) *Backend {
 	if env == nil {
 		env = os.Getenv
 	}
+	identity := options.Identity
+	if identity == nil {
+		identity = func() (int, int) { return os.Getuid(), os.Getgid() }
+	}
 
 	catalog := options.Catalog
 	if catalog == nil || isNilCatalog(catalog) {
 		catalog = templates.NewEmbeddedCatalog(assets.FS())
 	}
-	return &Backend{runner: runner, env: env, catalog: catalog}
+	return &Backend{runner: runner, env: env, identity: identity, catalog: catalog}
 }
 
 func (b *Backend) Name() box.Backend { return box.PodmanBackend }
