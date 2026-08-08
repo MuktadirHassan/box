@@ -185,9 +185,6 @@ func (r registry) Resolve(id string) (Resolved, error) {
 
 func NewEmbeddedCatalog(assets fs.FS) Catalog { return EmbeddedCatalog{files: assets} }
 func (c EmbeddedCatalog) Resolve(id string) (Resolved, error) {
-	if id == "terminal-tools" {
-		id = "ubuntu-24.04-terminal-tools"
-	}
 	if !namePattern.MatchString(id) {
 		return nil, fmt.Errorf("invalid template name %q", id)
 	}
