@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Box</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">DESKTOP ALPHA</p>
+          <h1>Box</h1>
+          <p class="subtitle">Manage your local development boxes.</p>
+        </div>
+        <button id="refresh" class="secondary">Refresh list</button>
+      </header>
+
+      <section class="panel create">
+        <h2>Create a box</h2>
+        <form id="create-form">
+          <label for="name">Name <span>(optional)</span></label>
+          <div class="row">
+            <input id="name" name="name" autocomplete="off" placeholder="e.g. project-dev" />
+            <button type="submit">Create</button>
+          </div>
+          <p class="hint">Leave blank to let Box choose a name.</p>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Boxes</h2>
+            <p class="hint">Select a box to inspect it or run a noninteractive action.</p>
+          </div>
+        </div>
+        <div id="boxes" class="boxes" aria-live="polite"></div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="section-heading">
+          <h2>Output</h2>
+          <span id="status" role="status" aria-live="polite" aria-atomic="true">Ready</span>
+        </div>
+        <pre id="output">Choose an action to see its output here.</pre>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

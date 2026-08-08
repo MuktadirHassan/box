@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -33,7 +32,7 @@ func newDeleteCommand(definitions definitionStore, runtimes *backend.Registry) *
 				if err != nil {
 					return err
 				}
-				if err := runtime.Delete(context.Background(), definition, metadata.Runtime, backend.DeleteOptions{RemovePersistentData: true}); err != nil {
+				if err := runtime.Delete(command.Context(), definition, metadata.Runtime, backend.DeleteOptions{RemovePersistentData: true}); err != nil {
 					return err
 				}
 			} else if !errors.Is(err, store.ErrMetadataNotFound) {

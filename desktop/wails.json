@@ -1,0 +1,9 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "box-desktop",
+  "outputfilename": "box-desktop",
+  "assetdir": "frontend",
+  "frontend:dir": "frontend",
+  "frontend:build": "true",
+  "frontend:dev:build": "true"
+}
