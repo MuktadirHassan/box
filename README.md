@@ -71,13 +71,13 @@ box setup work \
   --mount "$HOME/projects:/workspace" \
   --cpus 4 \
   --memory 8g \
-  --template terminal-tools \
+  --template ubuntu-24.04-terminal-tools \
   --shell fish \
   --prompt starship \
   --yes
 ```
 
-`terminal-tools` currently supports Ubuntu images. It installs Bash, Fish, or Zsh as selected, and can add a Starship prompt without changing existing shell configuration. Use `box setup work --refresh-template --yes` after a template update to add new default files without overwriting files already in the persistent home.
+`ubuntu-24.04-terminal-tools` supports Ubuntu 24.04 images. It installs Bash, Fish, or Zsh as selected, and can add a Starship prompt without changing existing shell configuration. Use `box setup work --refresh-template --yes` after a template update to add new default files without overwriting files already in the persistent home.
 
 Run a command or manage environments:
 
@@ -98,10 +98,9 @@ box setup work --template ubuntu-24.04-terminal-tools --image ubuntu:24.04 --yes
 ```
 
 Template IDs are backed by catalog manifests that declare image release,
-supported shells, and prompts. The legacy `terminal-tools` value remains
-accepted and is converted to the canonical ID only after a successful explicit
-setup update. Ubuntu 24.04 templates require `ubuntu:24.04` (a digest-qualified
-24.04 reference is also accepted); `latest` and other releases are rejected.
+supported shells, and prompts. Ubuntu 24.04 templates require `ubuntu:24.04`
+(a digest-qualified 24.04 reference is also accepted); `latest` and other
+releases are rejected.
 
 ## Upgrade
 

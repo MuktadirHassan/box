@@ -147,7 +147,7 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := NewRootCommand(definitions, registry)
-	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--template", "terminal-tools", "--shell", "fish", "--prompt", "starship", "--clipboard", "--yes"})
+	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "tamim", "--mount", "/work:/workspace", "--memory", "4g", "--pids-limit", "512", "--template", "ubuntu-24.04-terminal-tools", "--shell", "fish", "--prompt", "starship", "--clipboard", "--yes"})
 	if err := command.Execute(); err != nil {
 		t.Fatalf("setup command error = %v", err)
 	}
@@ -177,8 +177,8 @@ func TestSetupSavesResolvedConfiguration(t *testing.T) {
 	if !definition.Configuration.Integrations.Clipboard {
 		t.Error("Clipboard = false, want true")
 	}
-	if definition.Configuration.Template != "terminal-tools" {
-		t.Errorf("Template = %q, want %q", definition.Configuration.Template, "terminal-tools")
+	if definition.Configuration.Template != "ubuntu-24.04-terminal-tools" {
+		t.Errorf("Template = %q, want %q", definition.Configuration.Template, "ubuntu-24.04-terminal-tools")
 	}
 	if mounts := definition.Configuration.Mounts; len(mounts) != 1 || mounts[0] != (box.Mount{Source: "/work", Destination: "/workspace"}) {
 		t.Errorf("Mounts = %#v, want /work:/workspace", mounts)

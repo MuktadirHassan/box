@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Add catalog-driven, flat canonical template IDs and the `terminal-tools` legacy alias.
+* Add catalog-driven, flat canonical template IDs.
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
