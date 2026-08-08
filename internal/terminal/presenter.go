@@ -47,7 +47,7 @@ func (p Presenter) ConfigureInitial(definition box.Definition) (box.Definition, 
 		huh.NewInput().Title("Base image").Description("The image used to create the development environment.").Value(&configuration.Image).Validate(nonEmpty("base image")),
 		huh.NewInput().Title("Linux user").Description("The user account created inside the box.").Value(&configuration.User).Validate(box.ValidateUser),
 		huh.NewSelect[string]().Title("Network policy").Options(huh.NewOption("Outbound network access", "outbound"), huh.NewOption("No network access", "none")).Value(&configuration.Network),
-		huh.NewSelect[string]().Title("Environment template").Description("Optional tools installed when the box is created; currently supports Ubuntu images.").Options(templateOptions...).Value(&configuration.Template),
+		huh.NewSelect[string]().Title("Development environment").Description("Tools and in-container administration configured when the box is created.").Options(templateOptions...).Value(&configuration.Template),
 		huh.NewSelect[string]().Title("Interactive shell").Options(huh.NewOption("POSIX shell", "sh"), huh.NewOption("Bash", "bash"), huh.NewOption("Fish", "fish"), huh.NewOption("Zsh", "zsh")).Value(&configuration.Shell),
 		huh.NewSelect[string]().Title("Prompt").Options(huh.NewOption("No prompt customization", "none"), huh.NewOption("Starship", "starship")).Value(&configuration.Prompt),
 		huh.NewConfirm().Title("Persist the home directory?").Value(&configuration.Home.Enabled),
@@ -66,8 +66,7 @@ func environmentTemplateOptions(catalog templates.Catalog) ([]huh.Option[string]
 	if err != nil {
 		return nil, fmt.Errorf("load environment templates: %w", err)
 	}
-	options := make([]huh.Option[string], 0, len(available)+1)
-	options = append(options, huh.NewOption("No template", ""))
+	options := make([]huh.Option[string], 0, len(available))
 	for _, template := range available {
 		options = append(options, huh.NewOption(template.Description, template.Name))
 	}

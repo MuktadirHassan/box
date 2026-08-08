@@ -59,12 +59,18 @@ expect_contains "$inspect_output" "missing"
 
 setup_output=$($box_binary setup "$box_name" --image ubuntu:24.04 --user boxuser --yes)
 expect_contains "$setup_output" "Configured and created box \"$box_name\""
-[[ $(podman inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_name") == "true" ]] || fail "container root filesystem is not read-only"
+[[ $(podman inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$container_name") == "false" ]] || fail "container root filesystem is read-only"
+[[ $(podman inspect --format '{{.HostConfig.Privileged}}' "$container_name") == "false" ]] || fail "container unexpectedly runs privileged"
 
 podman start "$container_name" >/dev/null
-identity_output=$($box_binary exec "$box_name" -- sh -c 'printf "%s:%s" "$(id -un)" "$HOME"')
-[[ "$identity_output" == "boxuser:/home/boxuser" ]] || fail "unexpected container identity: $identity_output"
-$box_binary exec "$box_name" -- sh -c 'printf home > "$HOME/e2e-home"; printf cache > "$HOME/.cache/e2e-cache"'
+identity_output=$($box_binary exec "$box_name" -- sh -c 'printf "%s:%s:%s" "$(id -un)" "$(id -u)" "$HOME"')
+IFS=: read -r identity_name identity_uid identity_home <<<"$identity_output"
+[[ "$identity_name" == "boxuser" && "$identity_uid" != "0" && "$identity_home" == "/home/boxuser" ]] || fail "unexpected container identity: $identity_output"
+[[ $($box_binary exec "$box_name" -- sudo -n id -u) == "0" ]] || fail "passwordless in-container sudo is unavailable"
+$box_binary exec "$box_name" -- sh -c 'command -v curl git ip ping ps sudo >/dev/null'
+$box_binary exec "$box_name" -- sudo -n apt-get update >/dev/null
+$box_binary exec "$box_name" -- sudo -n apt-get install --yes --no-install-recommends bc >/dev/null
+$box_binary exec "$box_name" -- sh -c 'command -v bc >/dev/null; printf home > "$HOME/e2e-home"; printf cache > "$HOME/.cache/e2e-cache"'
 
 $box_binary stop "$box_name"
 inspect_output=$($box_binary inspect "$box_name")

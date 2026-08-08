@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Make the default Ubuntu environment writable and add passwordless in-container sudo with baseline development and networking tools.
+* Keep development containers rootless and non-privileged while allowing package installation and system customization.
 * Add catalog-driven, flat canonical template IDs.
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.

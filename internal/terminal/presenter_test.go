@@ -20,7 +20,7 @@ func TestEnvironmentTemplateOptionsUseCatalogLabelsAndCanonicalValues(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(options) != 2 || options[1].Value != "opaque-id" || options[1].Key != "Manifest label" {
+	if len(options) != 1 || options[0].Value != "opaque-id" || options[0].Key != "Manifest label" {
 		t.Fatalf("options = %#v", options)
 	}
 }

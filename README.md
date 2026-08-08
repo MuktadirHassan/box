@@ -55,13 +55,30 @@ box --version
 
 ## Quick start
 
-Create, configure, and enter an environment:
+Create, configure, and enter a writable Ubuntu development environment:
 
 ```bash
 box create work
 box setup work
 box enter work
 ```
+
+The default environment runs as a normal Linux user and provides passwordless
+`sudo` inside the rootless container. Its baseline tools include CA
+certificates, Curl, Git, networking and process utilities, Neovim, tmux, and
+ripgrep. Install anything else normally:
+
+```bash
+sudo apt update
+sudo apt install build-essential
+```
+
+Container root is scoped to Podman's rootless user namespace; it is not host
+root. Box does not enable privileged mode, host namespaces, host
+container-engine sockets, or implicit host mounts. Explicit writable mounts can
+still modify the corresponding host files, and containers share the host
+kernel, so Box is intended for trusted local development rather than hostile
+code isolation.
 
 `setup` is interactive by default. Use flags and `--yes` for scripts:
 
@@ -71,13 +88,22 @@ box setup work \
   --mount "$HOME/projects:/workspace" \
   --cpus 4 \
   --memory 8g \
-  --template ubuntu-24.04-terminal-tools \
   --shell fish \
   --prompt starship \
   --yes
 ```
 
-`ubuntu-24.04-terminal-tools` supports Ubuntu 24.04 images. It installs Bash, Fish, or Zsh as selected, and can add a Starship prompt without changing existing shell configuration. Use `box setup work --refresh-template --yes` after a template update to add new default files without overwriting files already in the persistent home.
+The built-in `ubuntu-24.04-terminal-tools` development template is selected by
+default. It supports Ubuntu 24.04 images, installs Bash, Fish, or Zsh as
+selected, and can add a Starship prompt without changing existing shell
+configuration. A digest-qualified Ubuntu 24.04 image is also accepted; `latest`
+and other releases are rejected.
+
+Packages and other root-filesystem changes survive normal stop/start operations,
+but recreating a Box during `box setup` rebuilds that filesystem. Keep durable
+user configuration and project data in the persistent home or explicit mounts.
+Use `box setup work --refresh-template --yes` to add new default files without
+overwriting files already in the persistent home.
 
 Run a command or manage environments:
 
@@ -91,16 +117,9 @@ box delete work --purge
 
 ## Environment templates
 
-Use the canonical template ID when configuring an environment:
-
-```bash
-box setup work --template ubuntu-24.04-terminal-tools --image ubuntu:24.04 --yes
-```
-
 Template IDs are backed by catalog manifests that declare image release,
-supported shells, and prompts. Ubuntu 24.04 templates require `ubuntu:24.04`
-(a digest-qualified 24.04 reference is also accepted); `latest` and other
-releases are rejected.
+supported shells, and prompts. The current built-in template is
+`ubuntu-24.04-terminal-tools`.
 
 ## Upgrade
 

@@ -160,9 +160,14 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, packageName := range []string{"fish", "jq", "neovim", "tmux", "ripgrep", "starship", "wl-clipboard"} {
+	for _, packageName := range []string{"ca-certificates", "curl", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "procps", "ripgrep", "starship", "sudo", "tmux", "wl-clipboard"} {
 		if !strings.Contains(string(containerfile), packageName) {
 			t.Errorf("Containerfile does not install %q", packageName)
+		}
+	}
+	for _, setup := range []string{"ARG BOX_USER", "ARG BOX_UID", "ARG BOX_GID", "NOPASSWD: ALL", "chmod 0440"} {
+		if !strings.Contains(string(containerfile), setup) {
+			t.Errorf("Containerfile does not configure %q", setup)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(directory, "dotfiles", ".config", "fish", "config.fish")); err != nil {
