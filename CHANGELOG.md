@@ -8,6 +8,13 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.2.1](https://github.com/MuktadirHassan/box/compare/v0.2.0...v0.2.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* make Ubuntu template package installation work ([#24](https://github.com/MuktadirHassan/box/issues/24)) ([5dcce81](https://github.com/MuktadirHassan/box/commit/5dcce81ee67d06c83c1cc1d6f618668d2fbf8434))
+
 ## [0.2.0](https://github.com/MuktadirHassan/box/compare/v0.1.5...v0.2.0) (2026-08-08)
 
 
