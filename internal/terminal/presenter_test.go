@@ -2,7 +2,9 @@ package terminal
 
 import (
 	"bytes"
+	"io"
 	"testing"
+	"time"
 
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/templates"
@@ -22,6 +24,41 @@ func TestEnvironmentTemplateOptionsUseCatalogLabelsAndCanonicalValues(t *testing
 	}
 	if len(options) != 2 || options[1].Value != "opaque-id" || options[1].Key != "Manifest label" {
 		t.Fatalf("options = %#v", options)
+	}
+}
+
+func TestStepUsesStableLinesWithoutTerminal(t *testing.T) {
+	output := &bytes.Buffer{}
+	presenter := Presenter{isTerminal: func(io.Writer) bool { return false }}
+	status, err := presenter.StartStep(output, "Checking Podman")
+	if err != nil {
+		t.Fatal(err)
+	}
+	status.Success()
+	failed, err := presenter.StartStep(output, "Creating box runtime")
+	if err != nil {
+		t.Fatal(err)
+	}
+	failed.Fail()
+
+	want := "Checking Podman...\nCreating box runtime...\nFailed: Creating box runtime.\n"
+	if output.String() != want {
+		t.Errorf("step output = %q, want %q", output.String(), want)
+	}
+}
+
+func TestStepAnimatesAndClearsLineOnTerminal(t *testing.T) {
+	output := &bytes.Buffer{}
+	presenter := Presenter{isTerminal: func(io.Writer) bool { return true }, stepInterval: time.Hour}
+	status, err := presenter.StartStep(output, "Checking Podman")
+	if err != nil {
+		t.Fatal(err)
+	}
+	status.Success()
+
+	want := "\r\x1b[2K⠋ Checking Podman\r\x1b[2K✓ Checking Podman\n"
+	if output.String() != want {
+		t.Errorf("step output = %q, want %q", output.String(), want)
 	}
 }
 
