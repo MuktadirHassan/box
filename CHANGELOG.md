@@ -8,6 +8,18 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.4.0](https://github.com/MuktadirHassan/box/compare/v0.3.0...v0.4.0) (2026-08-08)
+
+
+### Features
+
+* improve Ubuntu template and Podman E2E isolation ([#28](https://github.com/MuktadirHassan/box/issues/28)) ([6f72a1e](https://github.com/MuktadirHassan/box/commit/6f72a1eeeaf45a9e78e4eccdc64b302d03fce464))
+
+
+### Bug Fixes
+
+* add local bin path to fish config ([4e87ef3](https://github.com/MuktadirHassan/box/commit/4e87ef339a1635593f5749bd2950b88719671531))
+
 ## [0.3.0](https://github.com/MuktadirHassan/box/compare/v0.2.1...v0.3.0) (2026-08-08)
 
 
