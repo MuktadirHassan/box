@@ -3,12 +3,10 @@ package podman
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -16,6 +14,8 @@ import (
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/templates"
 )
+
+func testIdentity() (int, int) { return 1000, 1001 }
 
 type fakeCatalog struct{ resolved templates.Resolved }
 
@@ -95,7 +95,7 @@ func TestValidateRequiresRootlessPodman(t *testing.T) {
 func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	runner := &fakeRunner{outputs: []outputResult{{output: "container-id\n"}}}
 	mount := t.TempDir()
-	backend := New(Options{Runner: runner})
+	backend := New(Options{Runner: runner, Identity: testIdentity})
 	definition := box.NewDefinition("demo")
 	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Home: box.Persistence{Enabled: true}, Caches: box.Persistence{Enabled: true}, Network: "none", Mounts: []box.Mount{{Source: mount, Destination: "/workspace"}}}
 	metadata, err := backend.Create(context.Background(), definition)
@@ -107,13 +107,13 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	}
 	arguments := runner.outputCalls[0].arguments
 	joined := strings.Join(arguments, "\x00")
-	for _, want := range []string{fmt.Sprintf("--user\x00%d:%d", os.Getuid(), os.Getgid()), fmt.Sprintf("dev:x:%d:%d::/home/dev:/bin/sh", os.Getuid(), os.Getgid()), "HOME=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
+	for _, want := range []string{"--user\x001000:1001", "dev:x:1000:1001::/home/dev:/bin/sh", "HOME=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("arguments missing %q: %#v", want, arguments)
 		}
 	}
 	if !strings.Contains(joined, "--userns\x00keep-id") {
-		t.Errorf("arguments do not preserve the invoking user's identity: %#v", arguments)
+		t.Errorf("arguments do not preserve the configured identity mapping: %#v", arguments)
 	}
 	for _, forbidden := range []string{"--read-only", "--cap-drop", "no-new-privileges", "--privileged", "--pid=host", "--network=host"} {
 		if strings.Contains(joined, forbidden) {
@@ -127,7 +127,7 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	definition := box.NewDefinition("demo")
 	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "ubuntu-24.04-terminal-tools", Shell: "fish", Prompt: "starship"}
 
-	if _, err := New(Options{Runner: runner}).Create(context.Background(), definition); err != nil {
+	if _, err := New(Options{Runner: runner, Identity: testIdentity}).Create(context.Background(), definition); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 	if len(runner.outputCalls) != 2 {
@@ -135,7 +135,7 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	}
 	build := runner.outputCalls[0].arguments
 	joinedBuild := strings.Join(build, "\x00")
-	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID="+strconv.Itoa(os.Getuid())) || !strings.Contains(joinedBuild, "BOX_GID="+strconv.Itoa(os.Getgid())) || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
+	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID=1000") || !strings.Contains(joinedBuild, "BOX_GID=1001") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
 		t.Errorf("build arguments = %#v", build)
 	}
 	create := strings.Join(runner.outputCalls[1].arguments, "\x00")

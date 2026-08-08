@@ -13,9 +13,16 @@ expect_contains() {
   [[ "$output" == *"$expected"* ]] || fail "expected output to contain '$expected', got: $output"
 }
 
+if [[ ${RUN_E2E:-} != "1" ]]; then
+  printf 'e2e: skipped (set RUN_E2E=1 to run Podman acceptance tests)\n'
+  exit 0
+fi
+
 workdir=$(mktemp -d)
+test_home="$workdir/home"
 box_binary="$workdir/box"
-box_name="e2e-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+run_suffix=$(basename "$workdir" | tr -cd '[:alnum:]')
+box_name="e2e-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${run_suffix}"
 container_name="box-$box_name"
 home_volume="$container_name-home"
 cache_volume="$container_name-cache"
@@ -24,21 +31,20 @@ cleanup() {
   local status=$?
   trap - EXIT
 
-  if [[ -x "$box_binary" && -d "$HOME/.local/share/box/boxes/$box_name" ]]; then
-    "$box_binary" delete "$box_name" --purge >/dev/null 2>&1 || true
+  if [[ -x "$box_binary" && -d "$test_home/.local/share/box/boxes/$box_name" ]]; then
+    HOME="$test_home" "$box_binary" delete "$box_name" --purge >/dev/null 2>&1 || true
   fi
   podman rm --force "$container_name" >/dev/null 2>&1 || true
   podman volume rm --force "$home_volume" "$cache_volume" >/dev/null 2>&1 || true
   podman image rm "$container_name-template" >/dev/null 2>&1 || true
-  podman system reset --force >/dev/null 2>&1 || true
   rm -rf "$workdir" >/dev/null 2>&1 || true
   exit "$status"
 }
 trap cleanup EXIT
 
+mkdir -p "$test_home"
+export HOME="$test_home"
 go build -o "$box_binary" .
-export HOME="$workdir/home"
-mkdir -p "$HOME"
 
 [[ $(podman info --format '{{.Host.Security.Rootless}}') == "true" ]] || fail "Podman must run rootlessly"
 
