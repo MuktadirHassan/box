@@ -1,6 +1,7 @@
 package podman
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -82,6 +83,27 @@ func (r *fakeRunner) Output(_ context.Context, arguments ...string) (string, err
 func (r *fakeRunner) Run(_ context.Context, arguments ...string) error {
 	r.runCalls = append(r.runCalls, commandCall{arguments})
 	return r.runErr
+}
+
+func TestCommandRunnerWritesToConfiguredOutput(t *testing.T) {
+	if os.Getenv("GO_WANT_PODMAN_RUNNER_HELPER") == "1" {
+		fmt.Fprint(os.Stdout, "stdout")
+		fmt.Fprint(os.Stderr, "stderr")
+		os.Exit(0)
+	}
+
+	t.Setenv("GO_WANT_PODMAN_RUNNER_HELPER", "1")
+	var stdout, stderr bytes.Buffer
+	runner := NewCommandRunnerWithWriters(os.Args[0], &stdout, &stderr)
+	if err := runner.Run(context.Background(), "-test.run=TestCommandRunnerWritesToConfiguredOutput", "--"); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if got := stdout.String(); got != "stdout" {
+		t.Errorf("stdout = %q, want %q", got, "stdout")
+	}
+	if got := stderr.String(); got != "stderr" {
+		t.Errorf("stderr = %q, want %q", got, "stderr")
+	}
 }
 
 func TestValidateRequiresRootlessPodman(t *testing.T) {

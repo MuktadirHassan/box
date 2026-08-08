@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -130,7 +129,7 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				return err
 			}
 
-			if err := runtime.Validate(context.Background()); err != nil {
+			if err := runtime.Validate(command.Context()); err != nil {
 				return err
 			}
 			if recreate {
@@ -138,12 +137,12 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				if err != nil {
 					return err
 				}
-				if err := oldRuntime.Delete(context.Background(), previous, metadata.Runtime, backend.DeleteOptions{}); err != nil {
+				if err := oldRuntime.Delete(command.Context(), previous, metadata.Runtime, backend.DeleteOptions{}); err != nil {
 					return fmt.Errorf("remove existing runtime: %w", err)
 				}
 			}
 
-			created, err := runtime.Create(context.Background(), definition)
+			created, err := runtime.Create(command.Context(), definition)
 			if err != nil {
 				if recreate {
 					metadata.Runtime.State = box.RuntimeMissing

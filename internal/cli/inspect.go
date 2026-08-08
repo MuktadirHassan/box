@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -49,7 +48,7 @@ func newInspectCommand(definitions definitionStore, runtimes *backend.Registry, 
 			if err != nil {
 				return err
 			}
-			status, err := runtime.Inspect(context.Background(), metadata.Runtime)
+			status, err := runtime.Inspect(command.Context(), metadata.Runtime)
 			if err != nil {
 				return err
 			}

@@ -21,6 +21,10 @@ type CommandRunner struct {
 }
 
 func NewCommandRunner(binary string) CommandRunner {
+	return NewCommandRunnerWithWriters(binary, os.Stdout, os.Stderr)
+}
+
+func NewCommandRunnerWithWriters(binary string, stdout, stderr io.Writer) CommandRunner {
 	if binary == "" {
 		binary = "podman"
 	}
@@ -28,8 +32,8 @@ func NewCommandRunner(binary string) CommandRunner {
 	return CommandRunner{
 		binary: binary,
 		stdin:  os.Stdin,
-		stdout: os.Stdout,
-		stderr: os.Stderr,
+		stdout: stdout,
+		stderr: stderr,
 	}
 }
 

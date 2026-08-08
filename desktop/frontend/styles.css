@@ -1,0 +1,42 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #111827;
+  color: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+main { max-width: 920px; margin: 0 auto; padding: 3rem 1.5rem; }
+header, .section-heading, .row, .box, .actions { display: flex; align-items: center; }
+header, .section-heading { justify-content: space-between; gap: 1rem; }
+header { margin-bottom: 2rem; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); letter-spacing: -0.06em; }
+h2 { font-size: 1.1rem; }
+h3 { font-size: 1rem; }
+.eyebrow { color: #67e8f9; font-size: .75rem; font-weight: 700; letter-spacing: .12em; }
+.subtitle { color: #9ca3af; margin-top: .35rem; }
+.panel { background: #1f2937; border: 1px solid #374151; border-radius: .8rem; margin-top: 1rem; padding: 1.25rem; }
+.create { max-width: 540px; }
+label { display: block; font-size: .9rem; font-weight: 600; margin: 1rem 0 .4rem; }
+label span, .hint { color: #9ca3af; font-size: .8rem; font-weight: 400; }
+.row { gap: .6rem; }
+input { background: #111827; border: 1px solid #4b5563; border-radius: .45rem; color: inherit; flex: 1; font: inherit; min-width: 0; padding: .65rem .75rem; }
+button { background: #22d3ee; border: 0; border-radius: .45rem; color: #083344; cursor: pointer; font: inherit; font-weight: 700; padding: .65rem .85rem; }
+button:hover { filter: brightness(1.1); }
+button:disabled, input:disabled { cursor: not-allowed; opacity: .6; }
+button:disabled:hover { filter: none; }
+button.secondary { background: #374151; color: #e5e7eb; }
+button.danger { background: #7f1d1d; color: #fee2e2; }
+.boxes { display: grid; gap: .65rem; margin-top: 1rem; }
+.boxes.empty { color: #9ca3af; padding: .75rem 0; }
+.box { background: #111827; border-radius: .55rem; gap: 1rem; justify-content: space-between; padding: .85rem; }
+.box p { color: #9ca3af; font-size: .85rem; margin-top: .2rem; }
+.actions { flex-wrap: wrap; gap: .4rem; justify-content: flex-end; }
+.actions button { font-size: .8rem; padding: .45rem .6rem; }
+.output-panel { min-height: 11rem; }
+#status { color: #67e8f9; font-size: .85rem; }
+#status.failed { color: #fca5a5; }
+pre { background: #030712; border-radius: .55rem; margin: 1rem 0 0; min-height: 7rem; overflow: auto; padding: 1rem; white-space: pre-wrap; }
+@media (max-width: 600px) { main { padding: 1.5rem 1rem; } header, .box { align-items: flex-start; flex-direction: column; } .actions { justify-content: flex-start; } }
