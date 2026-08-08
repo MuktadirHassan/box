@@ -9,12 +9,12 @@ ARG BOX_PROMPT=none
 ARG BOX_TEMPLATE_REVISION=0
 
 RUN case "$BOX_SHELL" in sh|bash) shell_package=;; fish|zsh) shell_package="$BOX_SHELL";; *) exit 1;; esac \
- && case "$BOX_PROMPT" in none) prompt_package=;; starship) prompt_package=starship;; *) exit 1;; esac \
+ && case "$BOX_PROMPT" in none) install_starship=false;; starship) install_starship=true;; *) exit 1;; esac \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
       ca-certificates curl git iproute2 iputils-ping jq neovim procps ripgrep sudo tmux \
-      $shell_package $prompt_package wl-clipboard \
- && rm -rf /var/lib/apt/lists/*
+      $shell_package wl-clipboard \
+ && if "$install_starship"; then curl --fail --show-error --silent --location https://starship.rs/install.sh | sh -s -- --yes --bin-dir /usr/local/bin; fi
 
 RUN test -n "$BOX_USER" \
  && test "$BOX_UID" -gt 0 \

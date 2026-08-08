@@ -160,7 +160,10 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, packageName := range []string{"ca-certificates", "curl", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "procps", "ripgrep", "starship", "sudo", "tmux", "wl-clipboard"} {
+	if strings.Contains(string(containerfile), "rm -rf /var/lib/apt/lists/*") {
+		t.Error("Containerfile removes APT package indexes needed by mutable boxes")
+	}
+	for _, packageName := range []string{"ca-certificates", "curl", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "procps", "ripgrep", "sudo", "tmux", "wl-clipboard"} {
 		if !strings.Contains(string(containerfile), packageName) {
 			t.Errorf("Containerfile does not install %q", packageName)
 		}
@@ -168,6 +171,11 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 	for _, setup := range []string{"ARG BOX_USER", "ARG BOX_UID", "ARG BOX_GID", "NOPASSWD: ALL", "chmod 0440"} {
 		if !strings.Contains(string(containerfile), setup) {
 			t.Errorf("Containerfile does not configure %q", setup)
+		}
+	}
+	for _, installerDetail := range []string{"https://starship.rs/install.sh", "--bin-dir /usr/local/bin"} {
+		if !strings.Contains(string(containerfile), installerDetail) {
+			t.Errorf("Containerfile does not install Starship using %q", installerDetail)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(directory, "dotfiles", ".config", "fish", "config.fish")); err != nil {
