@@ -183,7 +183,7 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 			t.Errorf("Containerfile does not install Fastfetch using %q", installerDetail)
 		}
 	}
-	for _, installerDetail := range []string{"NONINTERACTIVE=1", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh", "curl https://mise.run/fish | sh"} {
+	for _, installerDetail := range []string{"NONINTERACTIVE=1", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh", "curl https://mise.run | sh"} {
 		if !strings.Contains(string(containerfile), installerDetail) {
 			t.Errorf("Containerfile does not install Homebrew or Mise using %q", installerDetail)
 		}
@@ -197,6 +197,9 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 	}
 	if !strings.Contains(string(fishConfig), "fastfetch") {
 		t.Error("Fish configuration does not run Fastfetch")
+	}
+	if !strings.Contains(string(fishConfig), "if command -q mise\n    mise activate fish | source\nend") {
+		t.Error("Fish configuration does not activate Mise when it is installed")
 	}
 	starshipConfig, err := os.ReadFile(filepath.Join(directory, "dotfiles", ".config", "starship.toml"))
 	if err != nil {

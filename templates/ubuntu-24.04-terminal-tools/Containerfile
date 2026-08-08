@@ -41,6 +41,6 @@ RUN chmod 0755 /usr/local/bin/box-initialize-home \
  && cp -R /usr/local/share/box-template/dotfiles/. "/home/$BOX_USER/" \
  && chown -R "$BOX_UID:$BOX_GID" "/home/$BOX_USER" \
  && runuser --user "$BOX_USER" -- env HOME="/home/$BOX_USER" NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
- && runuser --user "$BOX_USER" -- env HOME="/home/$BOX_USER" /usr/bin/fish -c 'curl https://mise.run/fish | sh'
+ && runuser --user "$BOX_USER" -- env HOME="/home/$BOX_USER" /bin/sh -c 'curl https://mise.run | sh'
 
 ENTRYPOINT ["/usr/local/bin/box-initialize-home"]
