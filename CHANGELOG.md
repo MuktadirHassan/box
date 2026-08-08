@@ -6,6 +6,13 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.1.5](https://github.com/MuktadirHassan/box/compare/v0.1.4...v0.1.5) (2026-08-08)
+
+
+### Bug Fixes
+
+* **refactor:** remove legacy template alias ([#18](https://github.com/MuktadirHassan/box/issues/18)) ([5296413](https://github.com/MuktadirHassan/box/commit/52964131073865b60f433984d298f1da66d3c6ce))
+
 ## [0.1.4](https://github.com/MuktadirHassan/box/compare/v0.1.3...v0.1.4) (2026-08-08)
 
 
