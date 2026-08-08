@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
+	"time"
 
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
@@ -15,7 +17,11 @@ import (
 	assets "github.com/MuktadirHassan/box/templates"
 )
 
-type Presenter struct{ catalog templates.Catalog }
+type Presenter struct {
+	catalog      templates.Catalog
+	isTerminal   func(io.Writer) bool
+	stepInterval time.Duration
+}
 
 func NewPresenter(catalog ...templates.Catalog) ui.Presenter {
 	var c templates.Catalog
@@ -25,7 +31,105 @@ func NewPresenter(catalog ...templates.Catalog) ui.Presenter {
 	if c == nil {
 		c = templates.NewEmbeddedCatalog(assets.FS())
 	}
-	return Presenter{catalog: c}
+	return Presenter{catalog: c, isTerminal: terminalWriter, stepInterval: 80 * time.Millisecond}
+}
+
+type step struct {
+	writer      io.Writer
+	label       string
+	interactive bool
+	interval    time.Duration
+	done        chan struct{}
+	wait        sync.WaitGroup
+	mutex       sync.Mutex
+	frame       int
+	writeErr    error
+	finished    bool
+}
+
+var spinnerFrames = [...]string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+func (p Presenter) StartStep(writer io.Writer, label string) (ui.Step, error) {
+	interactive := p.isTerminal != nil && p.isTerminal(writer)
+	status := &step{writer: writer, label: label, interactive: interactive}
+	if !interactive {
+		if _, err := fmt.Fprintf(writer, "%s...\n", label); err != nil {
+			return nil, err
+		}
+		return status, nil
+	}
+
+	status.interval = p.stepInterval
+	if status.interval <= 0 {
+		status.interval = 80 * time.Millisecond
+	}
+	status.done = make(chan struct{})
+	if err := status.writeFrame(); err != nil {
+		return nil, err
+	}
+	status.wait.Add(1)
+	go status.animate()
+	return status, nil
+}
+
+func (s *step) animate() {
+	defer s.wait.Done()
+	ticker := time.NewTicker(s.interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.mutex.Lock()
+			if s.writeErr == nil {
+				s.frame = (s.frame + 1) % len(spinnerFrames)
+				s.writeErr = s.writeFrameLocked()
+			}
+			s.mutex.Unlock()
+		case <-s.done:
+			return
+		}
+	}
+}
+
+func (s *step) writeFrame() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.writeFrameLocked()
+}
+
+func (s *step) writeFrameLocked() error {
+	_, err := fmt.Fprintf(s.writer, "\r\x1b[2K%s %s", spinnerFrames[s.frame], s.label)
+	return err
+}
+
+func (s *step) Success() { s.finish("✓", false) }
+func (s *step) Fail()    { s.finish("✗", true) }
+
+func (s *step) finish(symbol string, failed bool) {
+	s.mutex.Lock()
+	if s.finished {
+		s.mutex.Unlock()
+		return
+	}
+	s.finished = true
+	if s.interactive {
+		close(s.done)
+	}
+	s.mutex.Unlock()
+
+	if !s.interactive {
+		if failed {
+			_, _ = fmt.Fprintf(s.writer, "Failed: %s.\n", s.label)
+		}
+		return
+	}
+
+	s.wait.Wait()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.writeErr == nil {
+		_, s.writeErr = fmt.Fprintf(s.writer, "\r\x1b[2K%s %s\n", symbol, s.label)
+	}
 }
 
 var (
@@ -183,6 +287,10 @@ func nonEmpty(name string) func(string) error {
 	}
 }
 func interactiveTerminal() bool { return terminal(os.Stdin) && terminal(os.Stdout) }
+func terminalWriter(writer io.Writer) bool {
+	file, ok := writer.(*os.File)
+	return ok && terminal(file)
+}
 func terminal(file *os.File) bool {
 	info, err := file.Stat()
 	return err == nil && info.Mode()&os.ModeCharDevice != 0

@@ -5,11 +5,13 @@ import (
 	"errors"
 	"io"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/MuktadirHassan/box/internal/backend"
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/store"
+	"github.com/MuktadirHassan/box/internal/ui"
 )
 
 type recordingBackend struct {
@@ -53,12 +55,25 @@ func (*recordingBackend) Exec(context.Context, box.RuntimeMetadata, []string) er
 type setupPresenter struct {
 	configure func(box.Definition) box.Definition
 	confirmed bool
+	labels    []string
+	steps     []*setupStep
 }
+
+type setupStep struct{ result string }
+
+func (s *setupStep) Success() { s.result = "success" }
+func (s *setupStep) Fail()    { s.result = "failed" }
 
 func (p *setupPresenter) ConfigureInitial(definition box.Definition) (box.Definition, error) {
 	return p.configure(definition), nil
 }
-func (p *setupPresenter) ConfirmSetup() error                                 { p.confirmed = true; return nil }
+func (p *setupPresenter) ConfirmSetup() error { p.confirmed = true; return nil }
+func (p *setupPresenter) StartStep(_ io.Writer, label string) (ui.Step, error) {
+	step := &setupStep{}
+	p.labels = append(p.labels, label)
+	p.steps = append(p.steps, step)
+	return step, nil
+}
 func (*setupPresenter) ShowDefinition(io.Writer, box.Definition) error        { return nil }
 func (*setupPresenter) ShowRuntime(io.Writer, box.RuntimeState, string) error { return nil }
 func (*setupPresenter) ShowList(io.Writer, []box.Definition) error            { return nil }
@@ -89,6 +104,34 @@ func TestSetupCreatesAndPersistsRuntimeMetadata(t *testing.T) {
 	}
 	if metadata.Runtime.ID != "runtime-id" {
 		t.Errorf("runtime ID = %q, want runtime-id", metadata.Runtime.ID)
+	}
+}
+
+func TestSetupReportsOrderedSuccessfulSteps(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatal(err)
+	}
+	runtime := &recordingBackend{}
+	registry, err := backend.NewRegistry(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	presenter := &setupPresenter{}
+	command := NewRootCommand(definitions, registry, presenter)
+	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "dev", "--template", "ubuntu-24.04-terminal-tools", "--yes"})
+	if err := command.Execute(); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"Checking Podman", "Building template and creating box runtime", "Saving box configuration"}
+	if !slices.Equal(presenter.labels, want) {
+		t.Fatalf("setup steps = %q, want %q", presenter.labels, want)
+	}
+	for index, step := range presenter.steps {
+		if step.result != "success" {
+			t.Errorf("step %q result = %q, want success", presenter.labels[index], step.result)
+		}
 	}
 }
 
@@ -227,10 +270,18 @@ func TestSetupRecordsMissingRuntimeWhenReplacementCreationFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	command := NewRootCommand(definitions, registry)
+	presenter := &setupPresenter{}
+	command := NewRootCommand(definitions, registry, presenter)
 	command.SetArgs([]string{"setup", "demo", "--image", "archlinux:latest", "--yes"})
 	if err := command.Execute(); !errors.Is(err, createErr) {
 		t.Fatalf("setup error = %v, want create error", err)
+	}
+	wantSteps := []string{"Checking Podman", "Removing existing runtime", "Creating box runtime"}
+	if !slices.Equal(presenter.labels, wantSteps) {
+		t.Fatalf("setup steps = %q, want %q", presenter.labels, wantSteps)
+	}
+	if presenter.steps[0].result != "success" || presenter.steps[1].result != "success" || presenter.steps[2].result != "failed" {
+		t.Errorf("setup step results = %q, %q, %q", presenter.steps[0].result, presenter.steps[1].result, presenter.steps[2].result)
 	}
 	unchanged, err := definitions.Load("demo")
 	if err != nil {

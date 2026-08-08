@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 
@@ -130,7 +130,11 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				return err
 			}
 
-			if err := runtime.Validate(context.Background()); err != nil {
+			ctx := command.Context()
+			statusWriter := command.ErrOrStderr()
+			if err := runSetupStep(presenter, statusWriter, "Checking Podman", func() error {
+				return runtime.Validate(ctx)
+			}); err != nil {
 				return err
 			}
 			if recreate {
@@ -138,12 +142,23 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				if err != nil {
 					return err
 				}
-				if err := oldRuntime.Delete(context.Background(), previous, metadata.Runtime, backend.DeleteOptions{}); err != nil {
+				if err := runSetupStep(presenter, statusWriter, "Removing existing runtime", func() error {
+					return oldRuntime.Delete(ctx, previous, metadata.Runtime, backend.DeleteOptions{})
+				}); err != nil {
 					return fmt.Errorf("remove existing runtime: %w", err)
 				}
 			}
 
-			created, err := runtime.Create(context.Background(), definition)
+			createLabel := "Creating box runtime"
+			if definition.Configuration.Template != "" {
+				createLabel = "Building template and creating box runtime"
+			}
+			createStep, err := startSetupStep(presenter, statusWriter, createLabel)
+			if err != nil {
+				return err
+			}
+			created, err := runtime.Create(ctx, definition)
+			finishSetupStep(createStep, err)
 			if err != nil {
 				if recreate {
 					metadata.Runtime.State = box.RuntimeMissing
@@ -153,11 +168,16 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 				}
 				return fmt.Errorf("create runtime: %w", err)
 			}
-			if err := definitions.SaveMetadata(definition.Name, box.Metadata{Runtime: created}); err != nil {
-				return fmt.Errorf("save runtime metadata: %w", err)
-			}
-			if err := definitions.Update(definition); err != nil {
-				return fmt.Errorf("mark box ready: %w", err)
+			if err := runSetupStep(presenter, statusWriter, "Saving box configuration", func() error {
+				if err := definitions.SaveMetadata(definition.Name, box.Metadata{Runtime: created}); err != nil {
+					return fmt.Errorf("save runtime metadata: %w", err)
+				}
+				if err := definitions.Update(definition); err != nil {
+					return fmt.Errorf("mark box ready: %w", err)
+				}
+				return nil
+			}); err != nil {
+				return err
 			}
 			if recreate {
 				_, err = fmt.Fprintf(command.OutOrStdout(), "Recreated box %q.\n", definition.Name)
@@ -186,6 +206,38 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 	flags.BoolVar(&options.yes, "yes", false, "save the displayed configuration")
 
 	return command
+}
+
+func startSetupStep(presenter ui.Presenter, writer io.Writer, label string) (ui.Step, error) {
+	if presenter == nil {
+		return nil, nil
+	}
+	step, err := presenter.StartStep(writer, label)
+	if err != nil {
+		return nil, fmt.Errorf("show setup status: %w", err)
+	}
+	return step, nil
+}
+
+func finishSetupStep(step ui.Step, operationErr error) {
+	if step == nil {
+		return
+	}
+	if operationErr != nil {
+		step.Fail()
+		return
+	}
+	step.Success()
+}
+
+func runSetupStep(presenter ui.Presenter, writer io.Writer, label string, operation func() error) error {
+	step, err := startSetupStep(presenter, writer, label)
+	if err != nil {
+		return err
+	}
+	operationErr := operation()
+	finishSetupStep(step, operationErr)
+	return operationErr
 }
 
 func resolveConfiguration(command *cobra.Command, current box.Configuration, options setupOptions) (box.Configuration, error) {
