@@ -20,6 +20,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 
 	home := box.ContainerHome(configuration.User)
 	uid, gid := b.identity()
+	runtimeDirectory := home
 	arguments := []string{
 		"create", "--tty", "--name", containerName(definition.Name),
 		"--userns", "keep-id", "--user", containerUser(uid, gid),
@@ -29,6 +30,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	}
 	arguments = append(arguments,
 		"--env", "HOME="+home, "--env", "USER="+configuration.User, "--env", "LOGNAME="+configuration.User,
+		"--env", "XDG_RUNTIME_DIR="+runtimeDirectory,
 		"--env", "BOX_TEMPLATE="+configuration.Template, "--env", "BOX_TEMPLATE_REVISION="+strconv.Itoa(configuration.TemplateRevision), "--env", "BOX_PROMPT="+configuration.Prompt, "--env", "SHELL="+shell,
 		"--workdir", home, "--hostname", definition.Name,
 		"--network", networkMode(configuration.Network),
@@ -48,7 +50,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	if configuration.Caches.Enabled {
 		arguments = append(arguments, "--mount", "type=volume,src="+cacheVolumeName(definition.Name)+",dst="+home+"/.cache,rw,U=true")
 	}
-	arguments = append(arguments, "--tmpfs", "/tmp:rw,nosuid,nodev", "--tmpfs", "/run:rw,nosuid,nodev")
+	arguments = append(arguments, "--tmpfs", "/tmp:rw,nosuid,nodev")
 	for _, mount := range configuration.Mounts {
 		arguments = append(arguments, "--mount", "type=bind,src="+mount.Source+",dst="+mount.Destination+",rw,nosuid,nodev")
 	}
@@ -92,7 +94,6 @@ func (b *Backend) withClipboard(arguments []string) ([]string, error) {
 	}
 	return append(arguments,
 		"--env", "WAYLAND_DISPLAY="+display,
-		"--env", "XDG_RUNTIME_DIR=/tmp",
 		"--mount", "type=bind,src="+socket+",dst=/tmp/"+display+",rw,nosuid,nodev",
 	), nil
 }

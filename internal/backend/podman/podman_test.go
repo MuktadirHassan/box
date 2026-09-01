@@ -107,7 +107,7 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	}
 	arguments := runner.outputCalls[0].arguments
 	joined := strings.Join(arguments, "\x00")
-	for _, want := range []string{"--user\x001000:1001", "dev:x:1000:1001::/home/dev:/bin/sh", "HOME=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
+	for _, want := range []string{"--user\x001000:1001", "dev:x:1000:1001::/home/dev:/bin/sh", "HOME=/home/dev", "XDG_RUNTIME_DIR=/home/dev", "type=volume,src=box-demo-cache,dst=/home/dev/.cache,rw,U=true", "type=bind,src=" + mount + ",dst=/workspace,rw,nosuid,nodev"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("arguments missing %q: %#v", want, arguments)
 		}
@@ -197,8 +197,12 @@ func TestIntegrationsRequireRealSockets(t *testing.T) {
 	backend := New(Options{Env: func(name string) string {
 		return map[string]string{"XDG_RUNTIME_DIR": directory, "WAYLAND_DISPLAY": "agent.sock", "SSH_AUTH_SOCK": socket}[name]
 	}})
-	if _, err := backend.withClipboard(nil); err != nil {
+	clipboardArguments, err := backend.withClipboard(nil)
+	if err != nil {
 		t.Fatalf("withClipboard() error = %v", err)
+	}
+	if strings.Contains(strings.Join(clipboardArguments, "\x00"), "XDG_RUNTIME_DIR=") {
+		t.Errorf("clipboard arguments override XDG_RUNTIME_DIR: %#v", clipboardArguments)
 	}
 	if _, err := backend.withSSHAgent(nil); err != nil {
 		t.Fatalf("withSSHAgent() error = %v", err)
