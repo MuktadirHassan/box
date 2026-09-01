@@ -12,7 +12,7 @@ RUN case "$BOX_SHELL" in sh|bash) shell_package=;; fish|zsh) shell_package="$BOX
  && case "$BOX_PROMPT" in none) install_starship=false;; starship) install_starship=true;; *) exit 1;; esac \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-      build-essential ca-certificates curl file git iproute2 iputils-ping jq neovim procps ripgrep sudo tmux \
+      build-essential ca-certificates curl file git iproute2 iputils-ping jq neovim podman procps ripgrep sudo tmux \
       $shell_package wl-clipboard \
  && case "$(dpkg --print-architecture)" in amd64) fastfetch_arch=amd64;; arm64) fastfetch_arch=aarch64;; *) exit 1;; esac \
  && curl --fail --show-error --silent --location "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-${fastfetch_arch}.deb" --output /tmp/fastfetch.deb \

@@ -163,7 +163,7 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 	if strings.Contains(string(containerfile), "rm -rf /var/lib/apt/lists/*") {
 		t.Error("Containerfile removes APT package indexes needed by mutable boxes")
 	}
-	for _, packageName := range []string{"build-essential", "ca-certificates", "curl", "file", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "procps", "ripgrep", "sudo", "tmux", "wl-clipboard"} {
+	for _, packageName := range []string{"build-essential", "ca-certificates", "curl", "file", "fish", "git", "iproute2", "iputils-ping", "jq", "neovim", "podman", "procps", "ripgrep", "sudo", "tmux", "wl-clipboard"} {
 		if !strings.Contains(string(containerfile), packageName) {
 			t.Errorf("Containerfile does not install %q", packageName)
 		}

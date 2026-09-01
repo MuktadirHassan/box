@@ -26,6 +26,9 @@ box_name="e2e-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}-${run_suffix}"
 container_name="box-$box_name"
 home_volume="$container_name-home"
 cache_volume="$container_name-cache"
+delegated_image="$container_name-delegated"
+runtime_directory="$workdir/runtime"
+podman_service_pid=""
 
 cleanup() {
   local status=$?
@@ -36,7 +39,11 @@ cleanup() {
   fi
   podman rm --force "$container_name" >/dev/null 2>&1 || true
   podman volume rm --force "$home_volume" "$cache_volume" >/dev/null 2>&1 || true
-  podman image rm "$container_name-template" >/dev/null 2>&1 || true
+  podman image rm "$container_name-template" "$delegated_image" >/dev/null 2>&1 || true
+  if [[ -n "$podman_service_pid" ]]; then
+    kill "$podman_service_pid" >/dev/null 2>&1 || true
+    wait "$podman_service_pid" >/dev/null 2>&1 || true
+  fi
   rm -rf "$workdir" >/dev/null 2>&1 || true
   exit "$status"
 }
@@ -47,6 +54,18 @@ export HOME="$test_home"
 go build -o "$box_binary" .
 
 [[ $(podman info --format '{{.Host.Security.Rootless}}') == "true" ]] || fail "Podman must run rootlessly"
+
+mkdir -p "$runtime_directory/podman"
+chmod 0700 "$runtime_directory"
+export XDG_RUNTIME_DIR="$runtime_directory"
+podman system service --time=0 "unix://$runtime_directory/podman/podman.sock" >"$workdir/podman-service.log" 2>&1 &
+podman_service_pid=$!
+for _ in {1..100}; do
+  [[ -S "$runtime_directory/podman/podman.sock" ]] && break
+  kill -0 "$podman_service_pid" >/dev/null 2>&1 || fail "temporary Podman service exited: $(<"$workdir/podman-service.log")"
+  sleep 0.1
+done
+[[ -S "$runtime_directory/podman/podman.sock" ]] || fail "temporary Podman service did not create its socket"
 
 version_output=$($box_binary --version)
 expect_contains "$version_output" "box version"
@@ -90,11 +109,17 @@ persistent_output=$($box_binary exec "$box_name" -- sh -c 'printf "%s:%s" "$(cat
 [[ "$persistent_output" == "home:cache" ]] || fail "persistent data did not survive recreation: $persistent_output"
 
 $box_binary stop "$box_name"
-template_output=$($box_binary setup "$box_name" --network outbound --template ubuntu-24.04-terminal-tools --shell bash --yes)
+template_output=$($box_binary setup "$box_name" --network outbound --template ubuntu-24.04-terminal-tools --shell bash --insecure-mode --yes)
 expect_contains "$template_output" "ubuntu-24.04-terminal-tools"
+expect_contains "$template_output" "Insecure mode      true"
 expect_contains "$template_output" "Recreated box \"$box_name\""
+[[ $(podman inspect --format '{{.HostConfig.Privileged}}' "$container_name") == "false" ]] || fail "insecure-mode container unexpectedly runs privileged"
+[[ $(podman inspect --format '{{.HostConfig.PidMode}}' "$container_name") != "host" ]] || fail "insecure-mode container uses the host PID namespace"
+[[ $(podman inspect --format '{{.HostConfig.NetworkMode}}' "$container_name") != "host" ]] || fail "insecure-mode container uses host networking"
 podman start "$container_name" >/dev/null
-$box_binary exec "$box_name" -- sh -c 'command -v bash jq nvim tmux rg >/dev/null'
+$box_binary exec "$box_name" -- sh -c 'command -v bash jq nvim podman tmux rg >/dev/null'
+$box_binary exec "$box_name" -- podman info >/dev/null
+$box_binary exec "$box_name" -- sh -c "build_dir=\$(mktemp -d); printf 'FROM docker.io/library/alpine:3.20\nCMD [\"printf\", \"delegated-podman-ok\"]\n' >\"\$build_dir/Containerfile\"; podman build --quiet --tag '$delegated_image' \"\$build_dir\" >/dev/null; test \"\$(podman run --rm '$delegated_image')\" = delegated-podman-ok"
 persistent_output=$($box_binary exec "$box_name" -- bash -c 'printf "%s:%s" "$(cat "$HOME/e2e-home")" "$(cat "$HOME/.cache/e2e-cache")"')
 [[ "$persistent_output" == "home:cache" ]] || fail "template recreation lost persistent data: $persistent_output"
 

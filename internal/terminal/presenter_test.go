@@ -52,7 +52,7 @@ func TestEnvironmentTemplateOptionsUseCatalogLabelsAndCanonicalValues(t *testing
 }
 
 func TestShowDefinitionAndRuntimeAlignInspectFields(t *testing.T) {
-	definition := box.Definition{Name: "demo", State: box.ReadyState, Backend: box.PodmanBackend, Version: 1, Configuration: box.Configuration{Image: "ubuntu:24.04", User: "swift-maple", Network: "outbound", Home: box.Persistence{Enabled: true}, Caches: box.Persistence{Enabled: true}}}
+	definition := box.Definition{Name: "demo", State: box.ReadyState, Backend: box.PodmanBackend, Version: 1, Configuration: box.Configuration{Image: "ubuntu:24.04", User: "swift-maple", Network: "outbound", Home: box.Persistence{Enabled: true}, Caches: box.Persistence{Enabled: true}, Integrations: box.Integrations{InsecureMode: true}}}
 	output := &bytes.Buffer{}
 	presenter := Presenter{}
 	if err := presenter.ShowDefinition(output, definition); err != nil {
@@ -61,7 +61,7 @@ func TestShowDefinitionAndRuntimeAlignInspectFields(t *testing.T) {
 	if err := presenter.ShowRuntime(output, box.RuntimeStopped, "container-id"); err != nil {
 		t.Fatal(err)
 	}
-	want := "Box demo\n  State              ready\n  Backend            podman\n  Version            1\n  Image              ubuntu:24.04\n  User               swift-maple\n  Network            outbound\n  Template           \n  Shell              \n  Prompt             \n  Persistent home    true\n  Persistent caches  true\n  Clipboard          false\n  SSH agent          false\n  Runtime            stopped\n  Runtime ID         container-id\n"
+	want := "Box demo\n  State              ready\n  Backend            podman\n  Version            1\n  Image              ubuntu:24.04\n  User               swift-maple\n  Network            outbound\n  Template           \n  Shell              \n  Prompt             \n  Persistent home    true\n  Persistent caches  true\n  Clipboard          false\n  SSH agent          false\n  Insecure mode      true\n  Runtime            stopped\n  Runtime ID         container-id\n"
 	if output.String() != want {
 		t.Errorf("inspection output = %q, want %q", output.String(), want)
 	}

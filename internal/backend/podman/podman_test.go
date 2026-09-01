@@ -115,7 +115,7 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 	if !strings.Contains(joined, "--userns\x00keep-id") {
 		t.Errorf("arguments do not preserve the configured identity mapping: %#v", arguments)
 	}
-	for _, forbidden := range []string{"--read-only", "--cap-drop", "no-new-privileges", "--privileged", "--pid=host", "--network=host"} {
+	for _, forbidden := range []string{"--read-only", "--cap-drop", "no-new-privileges", "--privileged", "--pid=host", "--network=host", "podman.sock", "DOCKER_HOST", "CONTAINER_HOST"} {
 		if strings.Contains(joined, forbidden) {
 			t.Errorf("arguments include unsupported restriction or host access %q: %#v", forbidden, arguments)
 		}
@@ -203,6 +203,102 @@ func TestIntegrationsRequireRealSockets(t *testing.T) {
 	invalid := New(Options{Env: func(string) string { return "/tmp/not-a-socket" }})
 	if _, err := invalid.withSSHAgent(nil); err == nil {
 		t.Error("withSSHAgent() error = nil for regular path")
+	}
+}
+
+func TestInsecureModeExposesOnlyHostRootlessPodmanSocket(t *testing.T) {
+	runtimeDirectory := t.TempDir()
+	socketDirectory := filepath.Join(runtimeDirectory, "podman")
+	if err := os.MkdirAll(socketDirectory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	socket := filepath.Join(socketDirectory, "podman.sock")
+	listener, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+
+	runner := &fakeRunner{outputs: []outputResult{{output: "container-id\n"}}}
+	backend := New(Options{
+		Runner:   runner,
+		Identity: testIdentity,
+		Env: func(name string) string {
+			if name == "XDG_RUNTIME_DIR" {
+				return runtimeDirectory
+			}
+			return ""
+		},
+	})
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{
+		Image: "ubuntu:24.04", User: "dev", Network: "outbound",
+		Integrations: box.Integrations{InsecureMode: true},
+	}
+	if _, err := backend.Create(context.Background(), definition); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	joined := strings.Join(runner.outputCalls[0].arguments, "\x00")
+	for _, want := range []string{
+		"DOCKER_HOST=unix:///tmp/podman.sock",
+		"CONTAINER_HOST=unix:///tmp/podman.sock",
+		"type=bind,src=" + socket + ",dst=/tmp/podman.sock,rw,nosuid,nodev",
+		"--userns\x00keep-id",
+		"--network\x00pasta",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("arguments missing %q: %#v", want, runner.outputCalls[0].arguments)
+		}
+	}
+	for _, forbidden := range []string{"--privileged", "--pid=host", "--network=host"} {
+		if strings.Contains(joined, forbidden) {
+			t.Errorf("arguments include forbidden host access %q: %#v", forbidden, runner.outputCalls[0].arguments)
+		}
+	}
+}
+
+func TestInsecureModeRejectsUnavailableOrUnsafeSocket(t *testing.T) {
+	t.Run("relative runtime directory", func(t *testing.T) {
+		backend := New(Options{Env: func(string) string { return "relative" }})
+		if _, err := backend.withHostPodmanSocket(nil); err == nil || !strings.Contains(err.Error(), "systemctl --user enable --now podman.socket") {
+			t.Errorf("withHostPodmanSocket() error = %v", err)
+		}
+	})
+
+	for _, test := range []struct {
+		name  string
+		setup func(t *testing.T, socket string)
+	}{
+		{name: "absent", setup: func(*testing.T, string) {}},
+		{name: "regular file", setup: func(t *testing.T, socket string) {
+			if err := os.WriteFile(socket, []byte("not a socket"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "symlink", setup: func(t *testing.T, socket string) {
+			target := filepath.Join(filepath.Dir(socket), "real.sock")
+			listener, err := net.Listen("unix", target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { listener.Close() })
+			if err := os.Symlink(target, socket); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runtimeDirectory := t.TempDir()
+			socketDirectory := filepath.Join(runtimeDirectory, "podman")
+			if err := os.MkdirAll(socketDirectory, 0755); err != nil {
+				t.Fatal(err)
+			}
+			test.setup(t, filepath.Join(socketDirectory, "podman.sock"))
+			backend := New(Options{Env: func(string) string { return runtimeDirectory }})
+			if _, err := backend.withHostPodmanSocket(nil); err == nil || !strings.Contains(err.Error(), "enable insecure mode") || !strings.Contains(err.Error(), "systemctl --user enable --now podman.socket") {
+				t.Errorf("withHostPodmanSocket() error = %v", err)
+			}
+		})
 	}
 }
 

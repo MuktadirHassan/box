@@ -59,8 +59,9 @@ type Limits struct {
 }
 
 type Integrations struct {
-	Clipboard bool `toml:"clipboard"`
-	SSHAgent  bool `toml:"ssh_agent"`
+	Clipboard    bool `toml:"clipboard"`
+	SSHAgent     bool `toml:"ssh_agent"`
+	InsecureMode bool `toml:"insecure_mode"`
 }
 
 func NewDefinition(name string) Definition {
