@@ -8,6 +8,13 @@
 * Enforce manifest-declared image, shell, and prompt compatibility and inject catalogs into consumers.
 * Move built-in template assets to the repository-root `templates/<template-id>/` layout and embed them through the root asset package.
 
+## [0.5.0](https://github.com/MuktadirHassan/box/compare/v0.4.0...v0.5.0) (2026-09-01)
+
+
+### Features
+
+* enhance tmux configuration with improved defaults and navigation shortcuts ([64d343a](https://github.com/MuktadirHassan/box/commit/64d343a5e4aca64c42d85549694614149c65dc66))
+
 ## [0.4.0](https://github.com/MuktadirHassan/box/compare/v0.3.0...v0.4.0) (2026-08-08)
 
 
