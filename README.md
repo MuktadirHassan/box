@@ -118,9 +118,10 @@ box setup work --insecure-mode --yes
 
 Insecure mode is disabled by default. It mounts the rootless host Podman socket,
 so `podman`, Docker-compatible clients, and SDKs in the Box receive the host
-user's container-engine authority. Do not run untrusted code in such a Box. This
-does not grant host root or enable privileged containers, but it can access any
-resources available to the host user's rootless Podman.
+user's container-engine authority. Do not run untrusted code in such a Box.
+Insecure mode does not grant host root. It delegates the full rootless Podman
+authority of the host user, including the ability to create containers with any
+options permitted to that rootless Podman user.
 
 Interactive setup can add any number of writable host mounts. Repeat `--mount`
 for scripted setup. Destinations may be absolute paths or `~` / `~/path`; Box
