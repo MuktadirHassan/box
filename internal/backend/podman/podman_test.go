@@ -45,19 +45,19 @@ func TestCreateUsesCatalogBuildContextAndRejectsBeforeRunner(t *testing.T) {
 	if _, err := New(Options{Runner: runner, Catalog: fakeCatalog{resolved}}).Create(context.Background(), definition); err == nil {
 		t.Fatal("Create() error = nil")
 	}
-	if len(runner.outputCalls) != 0 || resolved.built {
-		t.Errorf("runner/build context used before compatibility rejection: %#v, %v", runner.outputCalls, resolved.built)
+	if len(runner.outputCalls) != 0 || len(runner.runCalls) != 0 || resolved.built {
+		t.Errorf("runner/build context used before compatibility rejection: output=%#v, run=%#v, built=%v", runner.outputCalls, runner.runCalls, resolved.built)
 	}
 
 	resolved.validateErr = nil
-	runner.outputs = []outputResult{{output: "image\n"}, {output: "container\n"}}
+	runner.outputs = []outputResult{{output: "container\n"}}
 	if _, err := New(Options{Runner: runner, Catalog: fakeCatalog{resolved}}).Create(context.Background(), definition); err != nil {
 		t.Fatal(err)
 	}
 	if !resolved.built {
 		t.Error("BuildContext was not called")
 	}
-	build := strings.Join(runner.outputCalls[0].arguments, "\x00")
+	build := strings.Join(runner.runCalls[0].arguments, "\x00")
 	if !strings.Contains(build, "BASE_IMAGE=custom:1") || !strings.Contains(build, "--file") || !strings.Contains(build, "Containerfile") {
 		t.Errorf("build arguments = %v", build)
 	}
@@ -123,24 +123,27 @@ func TestCreateUsesConfiguredIdentityNotHostIdentity(t *testing.T) {
 }
 
 func TestCreateBuildsSelectedTemplate(t *testing.T) {
-	runner := &fakeRunner{outputs: []outputResult{{output: "image-id\n"}, {output: "container-id\n"}}}
+	runner := &fakeRunner{outputs: []outputResult{{output: "container-id\n"}}}
 	definition := box.NewDefinition("demo")
 	definition.Configuration = box.Configuration{Image: "ubuntu:24.04", User: "dev", Network: "outbound", Template: "ubuntu-24.04-terminal-tools", Shell: "fish", Prompt: "starship"}
 
 	if _, err := New(Options{Runner: runner, Identity: testIdentity}).Create(context.Background(), definition); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if len(runner.outputCalls) != 2 {
-		t.Fatalf("Output calls = %d, want 2", len(runner.outputCalls))
+	if len(runner.runCalls) != 1 {
+		t.Fatalf("Run calls = %d, want 1", len(runner.runCalls))
 	}
-	build := runner.outputCalls[0].arguments
+	if len(runner.outputCalls) != 1 {
+		t.Fatalf("Output calls = %d, want 1", len(runner.outputCalls))
+	}
+	build := runner.runCalls[0].arguments
 	joinedBuild := strings.Join(build, "\x00")
-	if !strings.Contains(joinedBuild, "build\x00--quiet\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID=1000") || !strings.Contains(joinedBuild, "BOX_GID=1001") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
+	if !strings.Contains(joinedBuild, "build\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || strings.Contains(joinedBuild, "--quiet") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID=1000") || !strings.Contains(joinedBuild, "BOX_GID=1001") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
 		t.Errorf("build arguments = %#v", build)
 	}
-	create := strings.Join(runner.outputCalls[1].arguments, "\x00")
+	create := strings.Join(runner.outputCalls[0].arguments, "\x00")
 	if !strings.Contains(create, "box-demo-template\x00/usr/bin/fish") {
-		t.Errorf("create arguments do not use template image: %#v", runner.outputCalls[1].arguments)
+		t.Errorf("create arguments do not use template image: %#v", runner.outputCalls[0].arguments)
 	}
 	if !strings.Contains(create, "SHELL=/usr/bin/fish") || strings.Contains(create, "--passwd-entry") {
 		t.Errorf("create arguments do not rely on the template's fish user consistently: %#v", runner.outputCalls[1].arguments)

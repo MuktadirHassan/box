@@ -178,12 +178,12 @@ func TestBuildContextIncludesTemplateAssets(t *testing.T) {
 			t.Errorf("Containerfile does not install Starship using %q", installerDetail)
 		}
 	}
-	for _, installerDetail := range []string{"dpkg --print-architecture", "fastfetch-linux-${fastfetch_arch}.deb", "dpkg --install /tmp/fastfetch.deb"} {
+	for _, installerDetail := range []string{"dpkg --print-architecture", "fastfetch-linux-${fastfetch_arch}.deb", "apt-get install --yes --no-install-recommends /tmp/fastfetch.deb"} {
 		if !strings.Contains(string(containerfile), installerDetail) {
 			t.Errorf("Containerfile does not install Fastfetch using %q", installerDetail)
 		}
 	}
-	for _, installerDetail := range []string{"NONINTERACTIVE=1", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh", "curl https://mise.run | sh"} {
+	for _, installerDetail := range []string{"NONINTERACTIVE=1", "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh", "https://mise.run", "/bin/sh /tmp/install-mise"} {
 		if !strings.Contains(string(containerfile), installerDetail) {
 			t.Errorf("Containerfile does not install Homebrew or Mise using %q", installerDetail)
 		}

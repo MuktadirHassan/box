@@ -44,7 +44,7 @@ func (b *Backend) buildTemplate(ctx context.Context, definition box.Definition) 
 	}
 	image := templateImageName(definition.Name)
 	uid, gid := b.identity()
-	if _, err := b.runner.Output(ctx, "build", "--quiet",
+	if err := b.runner.Run(ctx, "build",
 		"--build-arg", "BASE_IMAGE="+definition.Configuration.Image,
 		"--build-arg", "BOX_USER="+definition.Configuration.User,
 		"--build-arg", "BOX_UID="+strconv.Itoa(uid),
