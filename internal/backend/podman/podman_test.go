@@ -208,6 +208,9 @@ func TestIntegrationsRequireRealSockets(t *testing.T) {
 
 func TestInsecureModeExposesOnlyHostRootlessPodmanSocket(t *testing.T) {
 	runtimeDirectory := t.TempDir()
+	if err := os.Chmod(runtimeDirectory, 0700); err != nil {
+		t.Fatal(err)
+	}
 	socketDirectory := filepath.Join(runtimeDirectory, "podman")
 	if err := os.MkdirAll(socketDirectory, 0755); err != nil {
 		t.Fatal(err)
@@ -221,8 +224,10 @@ func TestInsecureModeExposesOnlyHostRootlessPodmanSocket(t *testing.T) {
 
 	runner := &fakeRunner{outputs: []outputResult{{output: "container-id\n"}}}
 	backend := New(Options{
-		Runner:   runner,
-		Identity: testIdentity,
+		Runner: runner,
+		Identity: func() (int, int) {
+			return os.Getuid(), os.Getgid()
+		},
 		Env: func(name string) string {
 			if name == "XDG_RUNTIME_DIR" {
 				return runtimeDirectory
@@ -265,6 +270,44 @@ func TestInsecureModeRejectsUnavailableOrUnsafeSocket(t *testing.T) {
 		}
 	})
 
+	t.Run("foreign-owned runtime directory", func(t *testing.T) {
+		runtimeDirectory := t.TempDir()
+		backend := New(Options{
+			Env:      func(string) string { return runtimeDirectory },
+			Identity: func() (int, int) { return os.Getuid() + 1, os.Getgid() },
+		})
+		if _, err := backend.withHostPodmanSocket(nil); err == nil || !strings.Contains(err.Error(), "owned by UID") {
+			t.Errorf("withHostPodmanSocket() error = %v", err)
+		}
+	})
+
+	t.Run("world-writable runtime directory", func(t *testing.T) {
+		runtimeDirectory := t.TempDir()
+		if err := os.Chmod(runtimeDirectory, 0777); err != nil {
+			t.Fatal(err)
+		}
+		backend := New(Options{Env: func(string) string { return runtimeDirectory }})
+		if _, err := backend.withHostPodmanSocket(nil); err == nil || !strings.Contains(err.Error(), "XDG_RUNTIME_DIR must not be accessible") {
+			t.Errorf("withHostPodmanSocket() error = %v", err)
+		}
+	})
+
+	t.Run("parent directory symlink", func(t *testing.T) {
+		target := t.TempDir()
+		if err := os.Mkdir(filepath.Join(target, "runtime"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		root := t.TempDir()
+		if err := os.Symlink(target, filepath.Join(root, "linked")); err != nil {
+			t.Fatal(err)
+		}
+		runtimeDirectory := filepath.Join(root, "linked", "runtime")
+		backend := New(Options{Env: func(string) string { return runtimeDirectory }})
+		if _, err := backend.withHostPodmanSocket(nil); err == nil || !strings.Contains(err.Error(), "cannot contain symlinks") {
+			t.Errorf("withHostPodmanSocket() error = %v", err)
+		}
+	})
+
 	for _, test := range []struct {
 		name  string
 		setup func(t *testing.T, socket string)
@@ -272,6 +315,21 @@ func TestInsecureModeRejectsUnavailableOrUnsafeSocket(t *testing.T) {
 		{name: "absent", setup: func(*testing.T, string) {}},
 		{name: "regular file", setup: func(t *testing.T, socket string) {
 			if err := os.WriteFile(socket, []byte("not a socket"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "world-writable Podman directory", setup: func(t *testing.T, socket string) {
+			if err := os.Chmod(filepath.Dir(socket), 0777); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "world-writable socket", setup: func(t *testing.T, socket string) {
+			listener, err := net.Listen("unix", socket)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { listener.Close() })
+			if err := os.Chmod(socket, 0777); err != nil {
 				t.Fatal(err)
 			}
 		}},

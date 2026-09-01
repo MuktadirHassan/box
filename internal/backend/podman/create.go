@@ -109,11 +109,8 @@ func (b *Backend) withSSHAgent(arguments []string) ([]string, error) {
 }
 
 func (b *Backend) withHostPodmanSocket(arguments []string) ([]string, error) {
-	runtimeDirectory := b.env("XDG_RUNTIME_DIR")
-	if runtimeDirectory == "" || !filepath.IsAbs(runtimeDirectory) {
-		return nil, fmt.Errorf("enable insecure mode: XDG_RUNTIME_DIR must be an absolute path; activate the rootless Podman socket with systemctl --user enable --now podman.socket")
-	}
-	socket, err := secureSocket(filepath.Join(runtimeDirectory, "podman", "podman.sock"))
+	uid, _ := b.identity()
+	socket, err := secureHostPodmanSocket(b.env("XDG_RUNTIME_DIR"), uid)
 	if err != nil {
 		return nil, fmt.Errorf("enable insecure mode: host rootless Podman socket unavailable: %w; activate it with systemctl --user enable --now podman.socket", err)
 	}
