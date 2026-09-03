@@ -197,12 +197,13 @@ func TestIntegrationsRequireRealSockets(t *testing.T) {
 	backend := New(Options{Env: func(name string) string {
 		return map[string]string{"XDG_RUNTIME_DIR": directory, "WAYLAND_DISPLAY": "agent.sock", "SSH_AUTH_SOCK": socket}[name]
 	}})
-	clipboardArguments, err := backend.withClipboard(nil)
+	clipboardArguments, err := backend.withClipboard(nil, "/home/dev")
 	if err != nil {
 		t.Fatalf("withClipboard() error = %v", err)
 	}
-	if strings.Contains(strings.Join(clipboardArguments, "\x00"), "XDG_RUNTIME_DIR=") {
-		t.Errorf("clipboard arguments override XDG_RUNTIME_DIR: %#v", clipboardArguments)
+	clipboardJoined := strings.Join(clipboardArguments, "\x00")
+	if strings.Contains(clipboardJoined, "XDG_RUNTIME_DIR=") || !strings.Contains(clipboardJoined, "dst=/home/dev/agent.sock") {
+		t.Errorf("clipboard arguments do not preserve the configured runtime directory: %#v", clipboardArguments)
 	}
 	if _, err := backend.withSSHAgent(nil); err != nil {
 		t.Fatalf("withSSHAgent() error = %v", err)
@@ -210,6 +211,62 @@ func TestIntegrationsRequireRealSockets(t *testing.T) {
 	invalid := New(Options{Env: func(string) string { return "/tmp/not-a-socket" }})
 	if _, err := invalid.withSSHAgent(nil); err == nil {
 		t.Error("withSSHAgent() error = nil for regular path")
+	}
+}
+
+func TestClipboardAndInsecureModeUseIndependentSocketPaths(t *testing.T) {
+	runtimeDirectory := t.TempDir()
+	if err := os.Chmod(runtimeDirectory, 0700); err != nil {
+		t.Fatal(err)
+	}
+	waylandSocket := filepath.Join(runtimeDirectory, "wayland-1")
+	waylandListener, err := net.Listen("unix", waylandSocket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { waylandListener.Close() })
+	podmanDirectory := filepath.Join(runtimeDirectory, "podman")
+	if err := os.Mkdir(podmanDirectory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	podmanSocket := filepath.Join(podmanDirectory, "podman.sock")
+	podmanListener, err := net.Listen("unix", podmanSocket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { podmanListener.Close() })
+
+	runner := &fakeRunner{outputs: []outputResult{{output: "container-id\n"}}}
+	backend := New(Options{
+		Runner:   runner,
+		Identity: func() (int, int) { return os.Getuid(), os.Getgid() },
+		Env: func(name string) string {
+			return map[string]string{
+				"XDG_RUNTIME_DIR": runtimeDirectory,
+				"WAYLAND_DISPLAY": "wayland-1",
+			}[name]
+		},
+	})
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{
+		Image: "ubuntu:24.04", User: "dev", Network: "outbound",
+		Integrations: box.Integrations{Clipboard: true, InsecureMode: true},
+	}
+	if _, err := backend.Create(context.Background(), definition); err != nil {
+		t.Fatal(err)
+	}
+
+	joined := strings.Join(runner.outputCalls[0].arguments, "\x00")
+	for _, want := range []string{
+		"XDG_RUNTIME_DIR=/home/dev",
+		"WAYLAND_DISPLAY=wayland-1",
+		"type=bind,src=" + waylandSocket + ",dst=/home/dev/wayland-1,rw,nosuid,nodev",
+		"CONTAINER_HOST=unix:///tmp/podman.sock",
+		"type=bind,src=" + podmanSocket + ",dst=/tmp/podman.sock,rw,nosuid,nodev",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("arguments missing %q: %#v", want, runner.outputCalls[0].arguments)
+		}
 	}
 }
 

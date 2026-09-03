@@ -56,7 +56,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	}
 	if configuration.Integrations.Clipboard {
 		var err error
-		arguments, err = b.withClipboard(arguments)
+		arguments, err = b.withClipboard(arguments, runtimeDirectory)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +79,7 @@ func (b *Backend) createArguments(definition box.Definition) ([]string, error) {
 	return append(arguments, configuration.Image, shell), nil
 }
 
-func (b *Backend) withClipboard(arguments []string) ([]string, error) {
+func (b *Backend) withClipboard(arguments []string, containerRuntimeDirectory string) ([]string, error) {
 	runtimeDirectory := b.env("XDG_RUNTIME_DIR")
 	display := b.env("WAYLAND_DISPLAY")
 	if display == "" {
@@ -94,7 +94,7 @@ func (b *Backend) withClipboard(arguments []string) ([]string, error) {
 	}
 	return append(arguments,
 		"--env", "WAYLAND_DISPLAY="+display,
-		"--mount", "type=bind,src="+socket+",dst=/tmp/"+display+",rw,nosuid,nodev",
+		"--mount", "type=bind,src="+socket+",dst="+containerRuntimeDirectory+"/"+display+",rw,nosuid,nodev",
 	), nil
 }
 
