@@ -51,6 +51,7 @@ func (b *Backend) buildTemplate(ctx context.Context, definition box.Definition) 
 		"--build-arg", "BOX_GID="+strconv.Itoa(gid),
 		"--build-arg", "BOX_SHELL="+shell,
 		"--build-arg", "BOX_PROMPT="+prompt,
+		"--build-arg", "BOX_INSECURE_MODE="+strconv.FormatBool(definition.Configuration.Integrations.InsecureMode),
 		"--build-arg", "BOX_TEMPLATE_REVISION="+strconv.Itoa(definition.Configuration.TemplateRevision),
 		"--file", filepath.Join(directory, "Containerfile"), "--tag", image, directory); err != nil {
 		return box.Definition{}, fmt.Errorf("build template image: %w", err)

@@ -107,7 +107,7 @@ identity_output=$($box_binary exec "$box_name" -- sh -c 'printf "%s:%s:%s" "$(id
 IFS=: read -r identity_name identity_uid identity_home <<<"$identity_output"
 [[ "$identity_name" == "boxuser" && "$identity_uid" != "0" && "$identity_home" == "/home/boxuser" ]] || fail "unexpected container identity: $identity_output"
 [[ $($box_binary exec "$box_name" -- sudo -n id -u) == "0" ]] || fail "passwordless in-container sudo is unavailable"
-$box_binary exec "$box_name" -- sh -c 'command -v curl git ip ping ps sudo >/dev/null'
+$box_binary exec "$box_name" -- sh -c 'command -v curl git ip ping ps sudo >/dev/null; ! command -v podman; test -z "${CONTAINER_HOST:-}"; test -z "${DOCKER_HOST:-}"; test ! -e /tmp/podman.sock'
 $box_binary exec "$box_name" -- sudo -n apt-get update >/dev/null
 $box_binary exec "$box_name" -- sudo -n apt-get install --yes --no-install-recommends bc >/dev/null
 $box_binary exec "$box_name" -- sh -c 'command -v bc >/dev/null; printf home > "$HOME/e2e-home"; printf cache > "$HOME/.cache/e2e-cache"'

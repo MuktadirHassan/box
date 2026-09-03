@@ -12,7 +12,6 @@ RUN apt-get update \
       iputils-ping \
       jq \
       neovim \
-      podman \
       procps \
       ripgrep \
       sudo \
@@ -95,5 +94,12 @@ COPY --chmod=0755 initialize-home /usr/local/bin/box-initialize-home
 
 ARG BOX_TEMPLATE_REVISION=0
 RUN test "$BOX_TEMPLATE_REVISION" -ge 0
+
+ARG BOX_INSECURE_MODE=false
+RUN case "$BOX_INSECURE_MODE" in \
+      true) apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends podman ;; \
+      false) ;; \
+      *) exit 1 ;; \
+    esac
 
 ENTRYPOINT ["/usr/local/bin/box-initialize-home"]

@@ -138,7 +138,7 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	}
 	build := runner.runCalls[0].arguments
 	joinedBuild := strings.Join(build, "\x00")
-	if !strings.Contains(joinedBuild, "build\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || strings.Contains(joinedBuild, "--quiet") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID=1000") || !strings.Contains(joinedBuild, "BOX_GID=1001") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
+	if !strings.Contains(joinedBuild, "build\x00--build-arg\x00BASE_IMAGE=ubuntu:24.04") || strings.Contains(joinedBuild, "--quiet") || !strings.Contains(joinedBuild, "BOX_USER=dev") || !strings.Contains(joinedBuild, "BOX_UID=1000") || !strings.Contains(joinedBuild, "BOX_GID=1001") || !strings.Contains(joinedBuild, "BOX_SHELL=fish") || !strings.Contains(joinedBuild, "BOX_PROMPT=starship") || !strings.Contains(joinedBuild, "BOX_INSECURE_MODE=false") || !strings.Contains(joinedBuild, "BOX_TEMPLATE_REVISION=0") || !strings.Contains(joinedBuild, "--tag\x00box-demo-template") {
 		t.Errorf("build arguments = %#v", build)
 	}
 	create := strings.Join(runner.outputCalls[0].arguments, "\x00")
@@ -147,6 +147,25 @@ func TestCreateBuildsSelectedTemplate(t *testing.T) {
 	}
 	if !strings.Contains(create, "SHELL=/usr/bin/fish") || strings.Contains(create, "--passwd-entry") {
 		t.Errorf("create arguments do not rely on the template's fish user consistently: %#v", runner.outputCalls[1].arguments)
+	}
+}
+
+func TestBuildTemplatePassesInsecureMode(t *testing.T) {
+	runner := &fakeRunner{}
+	definition := box.NewDefinition("demo")
+	definition.Configuration = box.Configuration{
+		Image: "ubuntu:24.04", User: "dev", Template: "ubuntu-24.04-terminal-tools", Shell: "sh", Prompt: "none",
+		Integrations: box.Integrations{InsecureMode: true},
+	}
+
+	if _, err := New(Options{Runner: runner, Identity: testIdentity}).buildTemplate(context.Background(), definition); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.runCalls) != 1 {
+		t.Fatalf("Run calls = %d, want 1", len(runner.runCalls))
+	}
+	if !strings.Contains(strings.Join(runner.runCalls[0].arguments, "\x00"), "BOX_INSECURE_MODE=true") {
+		t.Errorf("build arguments do not enable the Podman package: %#v", runner.runCalls[0].arguments)
 	}
 }
 
