@@ -144,7 +144,7 @@ func (Presenter) ShowDefinition(writer io.Writer, definition box.Definition) err
 	fields := [][2]string{{"State", string(definition.State)}, {"Backend", string(definition.Backend)}, {"Version", strconv.Itoa(definition.Version)}}
 	if definition.State == box.ReadyState {
 		configuration := definition.Configuration
-		fields = append(fields, [2]string{"Image", configuration.Image}, [2]string{"User", configuration.User}, [2]string{"Network", configuration.Network}, [2]string{"Template", configuration.Template}, [2]string{"Shell", configuration.Shell}, [2]string{"Prompt", configuration.Prompt}, [2]string{"Persistent home", strconv.FormatBool(configuration.Home.Enabled)}, [2]string{"Persistent caches", strconv.FormatBool(configuration.Caches.Enabled)}, [2]string{"Clipboard", strconv.FormatBool(configuration.Integrations.Clipboard)}, [2]string{"SSH agent", strconv.FormatBool(configuration.Integrations.SSHAgent)})
+		fields = append(fields, [2]string{"Image", configuration.Image}, [2]string{"User", configuration.User}, [2]string{"Network", configuration.Network}, [2]string{"Template", configuration.Template}, [2]string{"Shell", configuration.Shell}, [2]string{"Prompt", configuration.Prompt}, [2]string{"Persistent home", strconv.FormatBool(configuration.Home.Enabled)}, [2]string{"Persistent caches", strconv.FormatBool(configuration.Caches.Enabled)}, [2]string{"Clipboard", strconv.FormatBool(configuration.Integrations.Clipboard)}, [2]string{"SSH agent", strconv.FormatBool(configuration.Integrations.SSHAgent)}, [2]string{"Insecure mode", strconv.FormatBool(configuration.Integrations.InsecureMode)})
 		for _, mount := range configuration.Mounts {
 			fields = append(fields, [2]string{"Mount", mount.Source + ":" + mount.Destination})
 		}

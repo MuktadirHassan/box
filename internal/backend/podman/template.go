@@ -44,13 +44,14 @@ func (b *Backend) buildTemplate(ctx context.Context, definition box.Definition) 
 	}
 	image := templateImageName(definition.Name)
 	uid, gid := b.identity()
-	if _, err := b.runner.Output(ctx, "build", "--quiet",
+	if err := b.runner.Run(ctx, "build",
 		"--build-arg", "BASE_IMAGE="+definition.Configuration.Image,
 		"--build-arg", "BOX_USER="+definition.Configuration.User,
 		"--build-arg", "BOX_UID="+strconv.Itoa(uid),
 		"--build-arg", "BOX_GID="+strconv.Itoa(gid),
 		"--build-arg", "BOX_SHELL="+shell,
 		"--build-arg", "BOX_PROMPT="+prompt,
+		"--build-arg", "BOX_INSECURE_MODE="+strconv.FormatBool(definition.Configuration.Integrations.InsecureMode),
 		"--build-arg", "BOX_TEMPLATE_REVISION="+strconv.Itoa(definition.Configuration.TemplateRevision),
 		"--file", filepath.Join(directory, "Containerfile"), "--tag", image, directory); err != nil {
 		return box.Definition{}, fmt.Errorf("build template image: %w", err)

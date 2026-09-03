@@ -87,7 +87,11 @@ Host exposure is always explicit and visible in `box inspect`.
 
 Never implicitly provide host container-engine sockets, SSH keys, cloud
 configuration, credential directories, writable host mounts, host namespaces,
-or privileged containers.
+or privileged containers. The sole container-engine socket exception is the
+persisted, inspected `--insecure-mode` opt-in, which delegates the full
+rootless Podman authority of the host user, including the ability to create
+containers with any options permitted to that rootless Podman user. It does not
+grant host root.
 
 - Podman uses `keep-id` in a rootless user namespace. The normal Box user may
   elevate inside the container, while container root remains mapped to an
