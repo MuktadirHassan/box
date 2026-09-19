@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/MuktadirHassan/box/internal/box"
 	"github.com/MuktadirHassan/box/internal/templates"
@@ -95,6 +96,104 @@ func secureSocket(path string) (string, error) {
 		return "", fmt.Errorf("%q is not a Unix socket", path)
 	}
 	return path, nil
+}
+
+func secureHostPodmanSocket(runtimeDirectory string, uid int) (string, error) {
+	if runtimeDirectory == "" || !filepath.IsAbs(runtimeDirectory) || filepath.Clean(runtimeDirectory) != runtimeDirectory {
+		return "", fmt.Errorf("XDG_RUNTIME_DIR must be a clean absolute path")
+	}
+	resolved, err := filepath.EvalSymlinks(runtimeDirectory)
+	if err != nil {
+		return "", fmt.Errorf("inspect XDG_RUNTIME_DIR: %w", err)
+	}
+	if resolved != runtimeDirectory {
+		return "", fmt.Errorf("XDG_RUNTIME_DIR cannot contain symlinks")
+	}
+	if err := validateRuntimeDirectoryChain(runtimeDirectory, uid); err != nil {
+		return "", err
+	}
+
+	podmanDirectory := filepath.Join(runtimeDirectory, "podman")
+	info, err := os.Lstat(podmanDirectory)
+	if err != nil {
+		return "", fmt.Errorf("inspect Podman runtime directory: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return "", fmt.Errorf("Podman runtime directory must be a real directory")
+	}
+	if err := validatePathOwner(info, uid); err != nil {
+		return "", fmt.Errorf("Podman runtime directory: %w", err)
+	}
+	if info.Mode().Perm()&0022 != 0 {
+		return "", fmt.Errorf("Podman runtime directory cannot be writable by group or others")
+	}
+
+	socket, err := secureSocket(filepath.Join(podmanDirectory, "podman.sock"))
+	if err != nil {
+		return "", err
+	}
+	info, err = os.Lstat(socket)
+	if err != nil {
+		return "", err
+	}
+	if err := validatePathOwner(info, uid); err != nil {
+		return "", fmt.Errorf("Podman socket: %w", err)
+	}
+	if info.Mode().Perm()&0002 != 0 {
+		return "", fmt.Errorf("Podman socket cannot be writable by others")
+	}
+	return socket, nil
+}
+
+func validateRuntimeDirectoryChain(runtimeDirectory string, uid int) error {
+	for path := runtimeDirectory; ; path = filepath.Dir(path) {
+		info, err := os.Lstat(path)
+		if err != nil {
+			return fmt.Errorf("inspect runtime path %q: %w", path, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return fmt.Errorf("runtime path %q must be a real directory", path)
+		}
+		owner, err := pathOwner(info)
+		if err != nil {
+			return err
+		}
+		if owner != 0 && owner != uid {
+			return fmt.Errorf("runtime path %q is owned by UID %d, want root or UID %d", path, owner, uid)
+		}
+		if path == runtimeDirectory {
+			if owner != uid {
+				return fmt.Errorf("XDG_RUNTIME_DIR is owned by UID %d, want UID %d", owner, uid)
+			}
+			if info.Mode().Perm()&0077 != 0 {
+				return fmt.Errorf("XDG_RUNTIME_DIR must not be accessible by group or others")
+			}
+		} else if info.Mode().Perm()&0022 != 0 && info.Mode()&os.ModeSticky == 0 {
+			return fmt.Errorf("runtime path %q cannot be writable by group or others without the sticky bit", path)
+		}
+		if path == filepath.Dir(path) {
+			return nil
+		}
+	}
+}
+
+func validatePathOwner(info os.FileInfo, uid int) error {
+	owner, err := pathOwner(info)
+	if err != nil {
+		return err
+	}
+	if owner != uid {
+		return fmt.Errorf("owned by UID %d, want UID %d", owner, uid)
+	}
+	return nil
+}
+
+func pathOwner(info os.FileInfo) (int, error) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, fmt.Errorf("cannot inspect path ownership")
+	}
+	return int(stat.Uid), nil
 }
 
 func validImage(image string) bool {

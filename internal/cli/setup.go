@@ -30,6 +30,7 @@ type setupOptions struct {
 	refreshTemplate bool
 	clipboard       bool
 	sshAgent        bool
+	insecureMode    bool
 	yes             bool
 }
 
@@ -183,6 +184,7 @@ func newSetupCommand(definitions definitionStore, runtimes *backend.Registry, pr
 	flags.BoolVar(&options.refreshTemplate, "refresh-template", false, "reapply new template defaults without overwriting existing files")
 	flags.BoolVar(&options.clipboard, "clipboard", false, "enable host clipboard integration")
 	flags.BoolVar(&options.sshAgent, "ssh-agent", false, "enable SSH agent forwarding")
+	flags.BoolVar(&options.insecureMode, "insecure-mode", false, "expose the host rootless Podman API, granting host container-engine authority")
 	flags.BoolVar(&options.yes, "yes", false, "save the displayed configuration")
 
 	return command
@@ -245,6 +247,9 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 	if flags.Changed("ssh-agent") {
 		configuration.Integrations.SSHAgent = options.sshAgent
 	}
+	if flags.Changed("insecure-mode") {
+		configuration.Integrations.InsecureMode = options.insecureMode
+	}
 
 	if options.refreshTemplate && configuration.Template == "" {
 		return box.Configuration{}, fmt.Errorf("--refresh-template requires an environment template")
@@ -254,7 +259,7 @@ func resolveConfiguration(command *cobra.Command, current box.Configuration, opt
 }
 
 func setupConfigurationFlagsChanged(command *cobra.Command) bool {
-	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "template", "shell", "prompt", "refresh-template", "clipboard", "ssh-agent"} {
+	for _, name := range []string{"backend", "image", "user", "mount", "cpus", "memory", "pids-limit", "network", "template", "shell", "prompt", "refresh-template", "clipboard", "ssh-agent", "insecure-mode"} {
 		if command.Flags().Changed(name) {
 			return true
 		}

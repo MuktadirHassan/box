@@ -224,6 +224,75 @@ func TestSetupPersistsCatalogCanonicalIDAndRecreatesOnTemplateChange(t *testing.
 	}
 }
 
+func TestSetupPersistsRevokesAndDisclosesInsecureMode(t *testing.T) {
+	definitions := store.New(filepath.Join(t.TempDir(), "boxes"))
+	if err := definitions.Create(box.NewDefinition("demo")); err != nil {
+		t.Fatal(err)
+	}
+	runtime := &recordingBackend{}
+	registry, err := backend.NewRegistry(runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	output := &bytes.Buffer{}
+	command := NewRootCommand(definitions, registry)
+	command.SetOut(output)
+	command.SetArgs([]string{"setup", "demo", "--image", "ubuntu:24.04", "--user", "dev", "--insecure-mode", "--yes"})
+	if err := command.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	definition, err := definitions.Load("demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !definition.Configuration.Integrations.InsecureMode {
+		t.Fatal("InsecureMode = false after explicit opt-in")
+	}
+	if !strings.Contains(output.String(), "insecure mode: true") {
+		t.Errorf("setup output does not disclose insecure mode: %q", output.String())
+	}
+
+	command = NewRootCommand(definitions, registry)
+	command.SetArgs([]string{"setup", "demo", "--yes"})
+	if err := command.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	definition, err = definitions.Load("demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !definition.Configuration.Integrations.InsecureMode {
+		t.Fatal("InsecureMode = false when the flag was omitted")
+	}
+
+	command = NewRootCommand(definitions, registry)
+	command.SetArgs([]string{"setup", "demo", "--insecure-mode=false", "--yes"})
+	if err := command.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	definition, err = definitions.Load("demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if definition.Configuration.Integrations.InsecureMode {
+		t.Error("InsecureMode = true after explicit revocation")
+	}
+	if runtime.deleted.Name != "demo" || runtime.created.Configuration.Integrations.InsecureMode {
+		t.Errorf("insecure-mode toggle did not recreate safely: deleted=%#v created=%#v", runtime.deleted, runtime.created)
+	}
+}
+
+func TestSetupInsecureModeDefaultsFalse(t *testing.T) {
+	configuration, err := resolveConfiguration(newSetupCommand(nil, nil, nil), box.Configuration{}, setupOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if configuration.Integrations.InsecureMode {
+		t.Error("InsecureMode = true by default")
+	}
+}
+
 func TestDeleteRequiresPurge(t *testing.T) {
 	command := NewRootCommand(store.New(filepath.Join(t.TempDir(), "boxes")), nil)
 	command.SetArgs([]string{"delete", "demo"})

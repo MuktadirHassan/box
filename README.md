@@ -88,7 +88,7 @@ sudo apt install build-essential
 ```
 
 Container root is scoped to Podman's rootless user namespace; it is not host
-root. Box does not enable privileged mode, host namespaces, host
+root. Box does not enable privileged mode, host namespaces, implicit host
 container-engine sockets, or implicit host mounts. Explicit writable mounts can
 still modify the corresponding host files, and containers share the host
 kernel, so Box is intended for trusted local development rather than hostile
@@ -107,6 +107,21 @@ box setup work \
   --prompt starship \
   --yes
 ```
+
+To deliberately delegate the host user's rootless Podman API to trusted code in
+a Box, first activate the standard socket and then opt in on the command line:
+
+```bash
+systemctl --user enable --now podman.socket
+box setup work --insecure-mode --yes
+```
+
+Insecure mode is disabled by default. It mounts the rootless host Podman socket,
+so `podman`, Docker-compatible clients, and SDKs in the Box receive the host
+user's container-engine authority. Do not run untrusted code in such a Box.
+Insecure mode does not grant host root. It delegates the full rootless Podman
+authority of the host user, including the ability to create containers with any
+options permitted to that rootless Podman user.
 
 Interactive setup can add any number of writable host mounts. Repeat `--mount`
 for scripted setup. Destinations may be absolute paths or `~` / `~/path`; Box
