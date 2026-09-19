@@ -57,6 +57,9 @@ trap cleanup EXIT
 
 mkdir -p "$test_home"
 export HOME="$test_home"
+containers_conf="$workdir/containers.conf"
+printf '[engine]\ncgroup_manager = "cgroupfs"\n' >"$containers_conf"
+export CONTAINERS_CONF="$containers_conf"
 go build -o "$box_binary" .
 
 [[ $(podman info --format '{{.Host.Security.Rootless}}') == "true" ]] || fail "Podman must run rootlessly"
